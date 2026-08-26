@@ -40,9 +40,62 @@ I don't recommend rearranging your pane layout at this time.
 
 Try running some code
 
+### LOAD LIBRARY
+
 ```{r}
+library(ggplot2)
 
+```
 
+### Some scripting
+
+```{r}
+# this is a comment
+quiz1 <- 88 # this is how to assign a value to a name
+quiz2 <- 94
+quiz3 <- 79
+
+quiz1
+
+# average
+(quiz1 + quiz2 + quiz3)/3
+
+mean(quiz1 + quiz2 + quiz3) # NOT CORRECT; ADDS THEM
+mean(quiz1, quiz2, quiz3) # NOT CORRECT; TAKES ONLY MEAN OF FIRST ARGUMENT
+mean(c(quiz1, quiz2, quiz3)) # CORRECTLY TAKES MEAN; C IS A LIST
+
+myList <- c(quiz1, quiz2, quiz3) # assigns list to variable "myList"
+
+mean(myList)
+
+average <- mean(myList)
+
+quiz3 <- 99 # changes value of variable "quiz3" to 99, but has not updated "average" OR "myList"
+
+myList <- c(quiz1, quiz2, quiz3) # UPDATING ALL VARIABLES/FUNCTIONS
+average <- mean(myList)
+average
+round(average, 2)
+
+```
+
+### More scores!
+
+```{r}
+myScores <- c(88, 94, 79, 91, 85)
+myScores
+
+mean(myScores)
+min(myScores)
+max(myScores)
+length(myScores)
+summary(myScores)
+
+myStudents <- c("A", "B", "C", "D", "E")
+myStudents
+
+# bar plot
+barplot(myScores, names.arg = myStudents)
 ```
 
 ## Introducing `ggplot2`
