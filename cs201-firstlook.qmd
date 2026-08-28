@@ -83,7 +83,7 @@ round(average, 2)
 
 ```{r}
 myScores <- c(88, 94, 79, 91, 85)
-myScores
+# myScores ; commented due to breaking
 
 mean(myScores)
 min(myScores)
@@ -92,16 +92,68 @@ length(myScores)
 summary(myScores)
 
 myStudents <- c("A", "B", "C", "D", "E")
-myStudents
+# myStudents; commented due breaking
 
 # bar plot
-barplot(myScores, names.arg = myStudents)
+barplot(myScores, names.arg = myStudents, ylim = c(0, 100), main = "TITLE HERE", xlab = "pupils", y = "Test Scores")
+
 ```
 
 ## Introducing `ggplot2`
 
+#### Make a dataframe
+
 ```{r}
 
+grades_df <- data.frame(student = myStudents, score = myScores)
+# make list of students using myStudents, and scores using myScores
+grades_df
+
+summary(grades_df)
+
+nrow(grades_df) # numb of rows
+ncol(grades_df)
+dim(grades_df) # df dimensions
+```
+
+#### Try ggplot
+
+```{r}
+
+ggplot(data = grades_df, aes(student, y = score)) # foundation
+
+ggplot(data = grades_df, aes(x = reorder(student, -score), y = score, group = 1)) + # needed to add group = 1 for geom_line to tell it that it is part of the same group
+  # aes = aesthetic
+  # for reorder function, can just leave it as student to not reorder
+  geom_col(fill = "steelblue") +
+  geom_point() +
+  geom_line() +
+  theme_minimal() +
+  labs(title = "BEST GRAPH EVER", # labels
+       subtitle = "some quiz scores",
+       x = "the students",
+       y = "what they scored on their quiz")
+```
+
+#### Mutate dataframe
+
+```{r}
+
+library(tidyverse)
+
+grades_df <- grades_df |> # makes new graph, first variable can be old named graph to overwrite
+  mutate(study_hours = c(2, 5, 1, 4, 3))
+```
+
+#### Make scatterplot
+
+```{r}
+
+ggplot(data = grades_df, aes(x = study_hours, y = score)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE)
+
+# can't use fill (use color instead), don't use reorder
 ```
 
 ## Extra Credit (1pt)
@@ -110,6 +162,25 @@ What result do you expect when you run this expression?
 
 ```{r}
 
+1 + 1 + 1
+
+quiz1 + quiz2
+
+
+1 + 1 + 1 - 3
+
+0.1 + 0.1 + 0.1 - 0.3
+# why is this not 0
+
+options(scipen = 999) # turns off scientific  notatiion
+
+print(0.1, 20) # prints 0.1 value with 20 decimal
+print(0.3, 20) # also doesn't print properly
+print(0.5, 20) # it is acutally 0.5 in this case
+
+# {python} if used, then will still give same value
+
+### ANSWER: values are stored in base-2 instead of base-10
 ```
 
 What did you observe?
