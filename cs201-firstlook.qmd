@@ -190,8 +190,10 @@ print(0.5, 20) # it is acutally 0.5 in this case
 
 What did you observe?
 
-> Answer:
+> Answer: Solutions were close but not exact values.
 
 Why do you think this is happening? (You can look online for help)
 
-> Answer:
+> Answer: Values are stored in base-2 (binary) instead of base-10; can't be represented accurately, so they are slightly off.
+>
+> Solution: use float instead, or different type.
