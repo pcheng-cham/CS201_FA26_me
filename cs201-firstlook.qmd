@@ -180,7 +180,12 @@ print(0.5, 20) # it is acutally 0.5 in this case
 
 # {python} if used, then will still give same value
 
-### ANSWER: values are stored in base-2 instead of base-10
+### ANSWER: values are stored in base-2 instead of base-10 AKA binary; can't be represented accurately, so they are slightly off.
+# solution: use float
+
+# source for answer
+# https://www.reddit.com/r/learnpython/comments/ly5jv4/whats_different_between_decimal_and_floating/
+# https://docs.python.org/3/library/decimal.html
 ```
 
 What did you observe?
