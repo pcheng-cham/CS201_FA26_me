@@ -13,10 +13,10 @@ editor: visual
 
 ```{r, message=FALSE}
 
-install.packages("palmerpenguins") # cool penguins data for exploration
-install.packages("janitor") # facilitates data cleaning and exploration
-install.packages("skimr") # gives us neat summaries to skim
-install.packages("plotly") # interactive visualizations!
+# install.packages("palmerpenguins") # cool penguins data for exploration
+# install.packages("janitor") # facilitates data cleaning and exploration
+# install.packages("skimr") # gives us neat summaries to skim
+# install.packages("plotly") # interactive visualizations!
 
 library(tidyverse) # tidyverse is a collection that includes tidyr, dplyr, ggplot2, and more!
 library(palmerpenguins)
@@ -315,8 +315,16 @@ ggplotly(myPlotName)
 
 ```{r, message=FALSE, warning=FALSE}
 
+myPlotName2 <- ggplot(data = penguins_data, aes(x = culmen_depth_mm, y = body_mass_g, color = species)) +
+  geom_point() +
+  theme_bw() +
+  scale_fill_viridis_d(option = "mako", name = "Penguin Species") +
+  labs(title = "Palmer Penguins' Culmen Depth by Body Mass", # label changing
+       subtitle = "Three species observed on the three islands in the Palmer Archipelago",
+       x = "Culmen Depth (mm)",
+       y = "Body Mass (g)")
 
-
+ggplotly(myPlotName2)
 ```
 
 - Part 3
