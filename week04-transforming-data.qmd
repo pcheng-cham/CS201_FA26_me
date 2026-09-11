@@ -147,7 +147,9 @@ How about if we wanted to make a bar graph of the *average body mass by species*
 ```{r}
 #| label: avg mass
 
-
+averageMassTable <- male_female_only |>
+  group_by(species) |>
+  summarise(average_mass = mean(body_mass_g)) #making new value average_mass
 
 ```
 
@@ -156,7 +158,8 @@ How about if we wanted to make a bar graph of the *average body mass by species*
 ```{r}
 #| label: bar graph of avg mass
 
-
+ggplot(data = averageMassTable, aes(x = species, y = average_mass)) +
+  geom_bar(stat = "identity")
 
 ```
 
@@ -169,8 +172,11 @@ Bonus: If you assign this to a new object name, you can then use `view(object_na
 ```{r, message=FALSE}
 #| label: avg flipper length
 
+averageFlipperLengthTable <- male_female_only |>
+  group_by(species) |>
+  summarise(average_flipper_length = mean(flipper_length_mm)) #making new value average_flipper_length
 
-
+view(averageFlipperLengthTable)
 ```
 
 In the code chunk below, plot `average_flipper_length` using `ggplot()` and `geom_bar`. Customize the graph with colors, a theme, and labels, etc., as you wish.
@@ -178,9 +184,11 @@ In the code chunk below, plot `average_flipper_length` using `ggplot()` and `geo
 ```{r, message=FALSE}
 #| label: plot avg flipper length
 
-
-  
-
+ggplot(data = averageFlipperLengthTable, aes(x = species, y = average_flipper_length, fill = species)) +
+  geom_bar(stat = "identity") +
+  theme_light() + 
+  labs(y = "Average Flipper Length (mm)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 ```
 
 ## Exercise 2
@@ -192,8 +200,10 @@ Create a boxplot of body mass by species & make the plot interactive
 ```{r, message=FALSE, warning=FALSE}
 #| label: mass by species interactive
 
+bodyMassBySpeciesPlot <- ggplot(data = penguins_data, aes(x = species, y = body_mass_g, fill = species)) +
+  geom_boxplot()
 
-
+ggplotly(bodyMassBySpeciesPlot)
 ```
 
 ## Exercise 3
@@ -205,7 +215,20 @@ How many penguins live on each `island`? This one is a little tricky–think out
 ```{r, message=FALSE}
 #| label: count penguins
 
+table(penguins_data$island)
 
+
+# countPenguinsTable <- penguins_data |>
+#   group_by(island) |>
+#   summarise(totalByIsland = sum(body_mass_g))
+
+
+
+# ggplot(data = penguin_data, aes(x = island, y = , fill = species)) +
+#   geom_bar(stat = "identity") +
+#   theme_light() + 
+#   labs(y = "Average Flipper Length (mm)") +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 
 ```
 

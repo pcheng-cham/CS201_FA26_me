@@ -318,7 +318,7 @@ ggplotly(myPlotName)
 myPlotName2 <- ggplot(data = penguins_data, aes(x = culmen_depth_mm, y = body_mass_g, color = species)) +
   geom_point() +
   theme_bw() +
-  scale_fill_viridis_d(option = "mako", name = "Penguin Species") +
+  scale_color_viridis_d(option = "mako", name = "Penguin Species") +
   labs(title = "Palmer Penguins' Culmen Depth by Body Mass", # label changing
        subtitle = "Three species observed on the three islands in the Palmer Archipelago",
        x = "Culmen Depth (mm)",
