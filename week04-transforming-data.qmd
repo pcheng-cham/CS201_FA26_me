@@ -216,8 +216,10 @@ How many penguins live on each `island`? This one is a little tricky–think out
 #| label: count penguins
 
 table(penguins_data$island)
+# ?summary
 
 
+###ALL UNNECESSARY
 # countPenguinsTable <- penguins_data |>
 #   group_by(island) |>
 #   summarise(totalByIsland = sum(body_mass_g))
@@ -239,8 +241,43 @@ Create a data frame that has the average culmen depth for each species. Then, ma
 ```{r, message=FALSE}
 #| label: avg culmen depth by species
 
+#####CLEAN DATA FIRST
 
+###check for unique values of each first; if there is NA, need to delete/ignore
+##DONE
+#unique(penguins_data$culmen_depth_mm)
 
+###check number of valid entries; DOES NOT INCLUDE NA
+##DONE
+#table(penguins_data$culmen_depth_mm)
+
+###check number of invalid entries
+##DONE
+#sum(is.na(penguins_data$culmen_depth_mm))
+
+###filter valid entries AND/OR drop invalid entries before putting into new table
+validCulmenDepthData <- penguins_data |> #CTRL + SHIFT + M
+#DONT NEED THIS; UNECESSARY FOR THIS SINCE ONLY TRYING TO REMOVE NA VALUES FROM CULMEN_DEPTH_MM
+#  filter(culmen_depth_mm %in% c("valid numbers here", "valid numbers here")) |> 
+  ##DONE
+  drop_na(culmen_depth_mm)
+
+###new table of valid data
+##DONE
+averageCulmenDepthTable <- validCulmenDepthData |>
+  group_by(species) |>
+  summarise(average_culmen_depth = mean(culmen_depth_mm)) #making new value average_culmen_depth variable
+
+###test if average is valid
+##DONE
+#view(averageCulmenDepthTable)
+
+###making bar plot
+ggplot(data = averageCulmenDepthTable, aes(x = species, y = average_culmen_depth, fill = species)) +
+  geom_bar(stat = "identity") +   # ASK WHAT [STAT = "IDENTITY"]  IS SUPPOSED TO DO
+  theme_light() + 
+  labs(y = "Average Culmen Depth (mm)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 ```
 
 ## Push to GitHub!
