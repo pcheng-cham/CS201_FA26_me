@@ -57,9 +57,26 @@ Don't forget to assign to a new object name. (I'm just going to call mine `filte
 Hints: You can always check your work using `unique()`. It'll tell you the unique values that exist in a specified column, and will also help you identify the correct spelling
 
 ```{r, messages=FALSE}
-unique(penguins$species) # an example of how to use unique()
+#####FOR EXCLUDING (or including??) SPECIFIC ENTRIES
+#filterForQuestion3 <-
+#  dplyr::filter(penguins, sex == "FEMALE", ..)
 
+###data frame name defined first, instead of naming it within filter function
+question3Filter <- penguins %>%
+  dplyr::filter(
+                 sex == "FEMALE",
+                 culmen_length_mm >= 39,
+                 island %in% c("Dream", "Torgersen")
+                 )
 
+question3Filter
+
+# unique(filterForQuestion3$sex)
+# unique(filterForQuestion3$culmen_length_mm)
+# unique(filterForQuestion3$island)
+
+#####ASK ABOUT HOW TO CONCLUSIVELY CHECK WORK; UNIQUE() ONLY WORKS FOR 1 VARIABLE AT A TIME, SO DATA COULD POTENTIALLY BE MISSED?
+####MAYBE FILTER BY ONE CONDITION, THEN PUT RESULT INTO A NEW TABLE; REPEAT UNTIL LAST CONDITION + TABLE??? 
 ```
 
 ## 4. `select()`
@@ -69,9 +86,12 @@ Starting with the `penguins` data, keep all columns except `comments`. You shoul
 Assign this to a new object name so that you do not overwrite the original data!
 
 ```{r, message=FALSE, warning=FALSE}
+#####SELECT() IS SOLELY FOR COLUMNS; FOR EXCLUDING SPECIFIC COLUMNS
 
+question4Select <- penguins %>%
+  dplyr::select(-comments)
 
-
+unique(question4Select)
 ```
 
 ## 5. `relocate()`
@@ -81,8 +101,12 @@ Starting with `penguins`, move the `individual_id` variable to the third column 
 Don't forget to assign to a new object name!
 
 ```{r, message=FALSE, warning=FALSE}
+#####RELOCATE IS SOLEY FOR COLUMNS
+question5Relocate <- penguins %>%
+  dplyr::relocate(individual_id, .after = sample_number)
 
-
+view(question5Relocate)
+#####ask about why view() didn't work when running the code chunk all at once; ("Error: object 'question5Relocate' not found") was the error given in console
 ```
 
 ## 6. `rename()`
@@ -92,17 +116,26 @@ Starting with `penguins`, convert the `island` column to `island_name`. Use `vie
 Don't forget to assign to a new object name.
 
 ```{r, message=FALSE, warning=FALSE}
+#####RENAME IS SOLELY FOR COLUMNS
 
+question6Rename <- penguins %>%
+  dplyr::rename(island_name = island)
 
+view(question6Rename)
 ```
 
 ## 7. `mutate()`
 
-Copy `penguins` to a new object called `mutate` and add a column that displays flipper length as kilometers. Call that new column `flippometers`.
+Copy `penguins` to a new object (DATAFRAME IN THIS CASE; dataframe is a type of object) called `mutate` and add a column that displays flipper length as kilometers. Call that new column `flippometers`.
 
 ```{r, message=FALSE, warning=FALSE}
+#####MUTATE ADDS NEW COLUMN
 
+# 1 km == 1,000,000 mm
+mutate <- penguins %>%
+  dplyr::mutate(flippometers = flipper_length_mm * 1000000)
 
+view(mutate)
 ```
 
 ## 8. `group_by() |> summarize()`
@@ -114,8 +147,29 @@ Create a new dataframe called `number8`. Take `penguins`, group the data by isla
 Apply `na.rm` as needed.
 
 ```{r, message=FALSE, warning=FALSE}
+###checking if na.rm is needed or not; EXCLUDES ENTRIES WITHOUT DATA
+##DONE
+#unique(penguins$culmen_depth_mm)
+##DONE
+#sum(is.na(penguins$culmen_depth_mm))
+##na.rm IS NEEDED FOR CULMEN_DEPTH_MM
+
+##DONE
+# unique(penguins$culmen_length_mm)
+##DONE
+#sum(is.na(penguins$culmen_length_mm))
+##na.rm IS NEEDED FOR CULMEN_LENGTH_MM
 
 
+number8 <- penguins %>%
+  dplyr::group_by(island, species) %>%
+  summarize(culmen_depth_mean = mean(culmen_depth_mm, na.rm = TRUE),
+            culmen_length_mean = mean(culmen_length_mm, na.rm = TRUE)
+            )
+
+view(number8)
+
+#####ASK AS TO WHAT GROUP_BY AND SUMMARIZE ACTUALLY DOES
 ```
 
 ## 9. `across()`
@@ -124,7 +178,28 @@ Starting with `penguins`, only keep observations for Biscoe island, group by `sp
 
 ```{r, message=FALSE, warning=FALSE}
 
+question9Across <- penguins %>%
+  dplyr::filter(island == "Biscoe") %>%
+  group_by(species) %>%
+  summarize(
+    across(
+      c(culmen_length_mm:body_mass_g, delta_15_n_o_oo:delta_13_c_o_oo),
+      max,
+      na.rm = TRUE
+      )
+            )
 
+view(question9Across)
+
+#####CHECK STEP BY STEP?? ASK LATER
+
+###reference code
+# question3Filter <- penguins %>%
+#   dplyr::filter(
+#     sex == "FEMALE",
+#     culmen_length_mm >= 39,
+#     island %in% c("Dream", "Torgersen")
+#   )
 ```
 
 ## 10. `count()`
@@ -133,7 +208,18 @@ Starting with `penguins`, create a new object called `count` that filters out al
 
 ```{r, message=FALSE, warning=FALSE}
 
+count <- penguins %>%
+  dplyr::filter(sex %in% c("MALE", "FEMALE")) %>%
+  drop_na(sex) %>%        #ASK ABOUT HOW IT REMOVED THE "." ENTRIES, NOT ONLY THE NA ENTRIES; drop_na drops all non-listed entries???
+  count(island, species, sex)
 
+#total penguins are 333, which is in line with the male_female_only file, which had the same goal but for only the first half of the current question
+view(count)
+
+###MY REFERENCE CODE
+# male_female_only <- penguins_data |> #CTRL + SHIFT + M
+#   filter(sex %in% c("MALE", "FEMALE")) |> # string itself needs to match what's in data
+#   drop_na(sex)
 ```
 
 ## 11. `case_when()`
@@ -148,7 +234,33 @@ Use `summary(as.factor(case_when$size))` to check your work
 
 ```{r, message=FALSE, warning=FALSE}
 
+case_when <- penguins %>%
+  dplyr::mutate(size = if_else(
+                                body_mass_g >= 4050,   #condition
+                                "big",                 #if true
+                                "small",               #if false
+                                missing = "INVALID")   #invalids??
+                )
 
+#total is 344, which is correct; 2 invalids
+summary(as.factor(case_when$size))
+
+###ASK ABOUt nested if_else, PROBABLY NOT IDEAL/REALLY BAD, but will try to ask about optimizing later
+###not sure if if_else() would catch non integer types and flag them/ignore them when function is running
+##would put another if_else() in the "if false" portion of the first if_else()
+
+###references
+#GOOGLE LOOKUP: "are if else statements efficient if there's only 2 outputs"
+#                   "yandere simulator, optimization issues that were most apparent, "if""
+#                   https://www.reddit.com/r/csharp/comments/5xkpte/whats_a_good_alternative_to_a_series_of_ifelse/
+#               "if, in r language"
+#               "if_else vs ifelse, r"
+#               "if_else(), r"
+
+##only if using nested if/if_else()
+#GOOLE LOOKUP:
+#               "r, how to check variable type"
+#                   use class(x) OR typeof(x) to check variable type; IF integer, then do the value check; ELSE couts invalid statement
 ```
 
 ## 12. Final Boss 🐧 (up to 2.5 pts extra credit)
