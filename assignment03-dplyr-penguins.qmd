@@ -2,6 +2,7 @@
 title: "Assignment 3: Wrangling penguins with dplyr"
 subtitle: "STUDENT NAME"
 author: "Amber Camp"
+        "Patrick Cheng"
 date: "9/11/26"
 format: html
 editor: visual
@@ -234,13 +235,23 @@ Use `summary(as.factor(case_when$size))` to check your work
 
 ```{r, message=FALSE, warning=FALSE}
 
+# case_when <- penguins %>%
+#   dplyr::mutate(size = if_else(
+#                                 body_mass_g >= 4050,   #condition
+#                                 "big",                 #if true
+#                                 "small",               #if false
+#                                 missing = "INVALID")   #invalids??
+#                 )
+
 case_when <- penguins %>%
-  dplyr::mutate(size = if_else(
-                                body_mass_g >= 4050,   #condition
-                                "big",                 #if true
-                                "small",               #if false
-                                missing = "INVALID")   #invalids??
+  dplyr::mutate(size = case_when(
+                                body_mass_g >= 4050 ~ "big", #if true
+                                body_mass_g < 4050 ~ "small", #if false
+                                is.na(body_mass_g) ~ "MISSING",   #invalids??
+                                .default = "INVALID"
+                                )
                 )
+
 
 #total is 344, which is correct; 2 invalids
 summary(as.factor(case_when$size))
@@ -262,6 +273,24 @@ summary(as.factor(case_when$size))
 #               "r, how to check variable type"
 #                   use class(x) OR typeof(x) to check variable type; IF integer, then do the value check; ELSE couts invalid statement
 #ALSO CAN JUST CLEAN DATA BEFORE RUNNING THIS FUNCTION TOO; ASK AS TO WHAT IS BETTER, THOUGH IT MIGHT BE PROJECT DEPENDENT, DUE TO WHAT IS ACTUALLY NEEDED FROM THE DATA; IF DATA NEEDS ENTRIES EVEN WITH INVALID ELEMENTS, THEN THIS MIGHT BE BETTER
+
+#########################FOR AMBER:############################
+#####DIFFERENCE BETWEEN if_else(), ifelse(), AND case_when
+###ifelse()
+#conditional function; checks using logic/comparison (greater than, less than, etc)
+#doesn't need packages loaded to function
+#flexible with data types, but isn't safe/reliable; may drop "attributes", can convert types unintentionally (from user)
+
+###if_else()
+#similar to above ifelse(), but requires both outputs share exactly the same data type
+#safer option due to being stricter, and also handles missing values
+#fast
+
+###case_when()
+#similar to if_else() in terms of usage, but generally for 3 or more checks
+#when checking conditions, stops at first match
+#much more easily readable
+
 ```
 
 ## 12. Final Boss 🐧 (up to 2.5 pts extra credit)
@@ -304,7 +333,39 @@ Create a new object called `final_boss` that satisfies all of the following:
 
 ```{r, message=FALSE, warning=FALSE}
 
+final_boss <- penguins %>%
+  dplyr::filter(sex == "FEMALE") %>%
+###check if FEMALE Is only entry
+#  unique(final_boss$sex)
+  
+  drop_na(flipper_length_mm) %>%
+###check if there are only valid flipper lengths
+#unique(final_boss$flipper_length_mm)
 
+  filter(island %in% c("Dream", "Biscoe")) %>%
+###check for only Dream and Biscoe islands
+#unique(final_boss$island)
+  
+  select(species, island, flipper_length_mm, body_mass_g) %>%
+###want to check column labels
+#ASK HOW TO CHECK UNIQUE COLUMNS UN-MANUALLY
+#don't know how to check here outside of visually/deleting all short/long entries, then checking for unique entries
+  
+  dplyr::mutate(flipper_rank = 
+                  case_when(
+                            flipper_length_mm < 190 ~ "short",
+                            flipper_length_mm > 210 ~ "long",
+                            is.na(flipper_length_mm) ~ "MISSING",   #invalids
+                              .default = "medium" #rest should be in "medium" range
+                            )
+#####190 and 210 exact values were put into "medium" despite not being given an appropriate tag; ask if there is a different way to use case_when() to not default the rest of the valid values not covered by the first two conditions 
+                ) %>%
+  group_by(species, island, flipper_rank) %>%
+  
+#body mass, then get average, then round the average
+  summarize(avg_mass_g = round(mean(body_mass_g)))
+  #ask how to use "na.rm = TRUE" as second condition for mean to exclude missing values, since it gave an error
+print(final_boss)
 ```
 
 # Push to GitHub AND submit link on Canvas!!
