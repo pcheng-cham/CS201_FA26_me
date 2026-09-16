@@ -387,6 +387,15 @@ def_boxplot
 ### Question for next class:
 
 - How do you read a boxplot, and what are the different landmarks?
+  - minimum, Q1, median (Q2), Q3, maximum
+  - min and max are the whiskers
+    - whiskers do not automatically go all the way to the absolute extreme values. Instead, they stretch out to a maximum length of 1.5 times the IQR (the height or width of the box).
+    - edge; a whisker only reaches that 1.5× limit if there is an actual data point sitting right at or near that boundary. If not, it stops at the furthest real data point that fits inside that limit
+    - outliers are not included within these (further than 1.5 x IQR)
+    - A long whisker means the outer 25% of data in that direction is spread out over a wide range of values. A short whisker means those data values are clustered closely together. Unequal whisker lengths also show if your data is skewed (pulled longer in one direction).
+  - Interquartile Range (IQR): The length of the box itself. It shows the middle 50% of the data. You find it by subtracting Q1 from Q3.
+  - Range: max - min
+  - 
 - TODO FOR NEXT CLASS
 - box, middle, whiskers
 
