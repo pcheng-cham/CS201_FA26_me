@@ -1,0 +1,332 @@
+---
+title: "Exploratory Data Analysis, part 3"
+author: "Amber Camp"
+date: "`r Sys.Date()`"
+format: html
+editor: visual
+---
+
+## Exploratory Data Analysis Part 3
+
+Continuing on from Parts 1 and 2. Start by loading libraries. We'll load data as we go.
+
+## Packages
+
+```{r, message=FALSE}
+
+library(tidyverse)
+library(janitor)
+
+```
+
+## Data
+
+We'll start with `diamonds`, which we explored last class. Neither of the below are necessary, since you can automatically access diamonds as long as the right packages are loaded. But here is what you'd do to save diamonds to your environment and then open it up for viewing, as a reminder.
+
+```{r, message=FALSE}
+
+data("diamonds")
+View(diamonds)
+
+```
+
+## Labeling your plots
+
+Before the catalog: every plot you submit from here on needs a title and labeled axes. That's what `labs()` is for, and it works the same way on *every* plot type below.
+
+```{r}
+
+ggplot(diamonds, aes(x = carat, y = price)) +
+  geom_point(alpha = 0.1) +
+  labs(
+    title = "Diamond price increases with carat size",
+    x     = "Carat",
+    y     = "Price (USD)")
+
+```
+
+A few habits worth building:
+
+- Axis labels should include **units** where they exist ("Price (USD)", not "price").
+
+- A good title states the **finding**, not the variables. "Diamond price increases with carat size" is more useful than "Price vs. Carat."
+
+- You can also add `subtitle =`, `caption =` (great for citing your data source), and `color =` / `fill =` to rename a legend.
+
+```{r}
+
+ggplot(diamonds, aes(x = carat, y = price, color = cut)) +
+  geom_point(alpha = 0.1) +
+  labs(
+    title    = "Larger diamonds command higher prices regardless of cut",
+    subtitle = "53,940 diamonds from the ggplot2 sample dataset",
+    x        = "Carat",
+    y        = "Price (USD)",
+    color    = "Cut quality",
+    caption  = "Source: ggplot2::diamonds")
+
+```
+
+I'm leaving `labs()` off the reference plots below so the code stays readable, but **your assignment plots need it.**
+
+## Let's make plots!
+
+We've spent a fair bit of time looking at scatter plots, histograms, and boxplots. Here is when to use what, as well as some basic code. Keep this for reference. You'll need it for the rest of the semester :)
+
+#### Scatterplots:
+
+Use scatterplots to explore or compare the correlation between two continuous variables.
+
+```{r}
+
+ggplot(diamonds, aes(x = carat, y = price)) +
+  geom_point()
+
+```
+
+#### Density plots
+
+Use to show the distribution of a continuous variable. Map a categorical variable to `color` or `fill` to compare distributions across groups.
+
+```{r}
+
+ggplot(diamonds, aes(x = carat)) +
+  geom_density()
+
+```
+
+#### Line graphs
+
+Use line graphs when comparing counts or percentages of responses (for example) to levels of an ordered factor, or when the dependent variable is continuous and the independent variable is ordered. Normally line plots are for ordered data (like time). Here's an example with `carat` → `price`.
+
+I'm also including an example from the built-in `economics` dataset that shows a canonical time-series line plot of the unemployment over time (years).
+
+```{r}
+
+diamonds |>
+  group_by(carat) |> # group by carat size
+  summarize(mean_price = mean(price)) |> # calculate mean price for each carat group
+  ggplot(aes(x = carat, y = mean_price)) +
+  geom_line()
+
+ggplot(economics, aes(x = date, y = unemploy)) +
+  geom_line()
+
+```
+
+#### Bar charts a.k.a. bar plots
+
+Use when you want to visualize counts for one or more discrete variable. When you want to plot numeric dependent variables, a boxplot is generally more useful.
+
+```{r}
+
+ggplot(diamonds, aes(x = cut)) +
+  geom_bar()
+
+```
+
+#### Histograms
+
+Use to show the distribution of a single continuous variable. To compare distributions across groups, try a frequency polygon, density plot, or boxplot instead.
+
+```{r}
+
+ggplot(diamonds, aes(x = carat)) +
+  geom_histogram(binwidth = .1) # don't forget binwidth!
+
+```
+
+#### Frequency Polygons
+
+Use when you want to visualize the distribution of a continuous variable and prefer a line plot over a histogram. This can help show trends or patterns more clearly. Remember, you read this like you would read a histogram!
+
+```{r}
+
+ggplot(diamonds, aes(x = carat)) + # this one displays counts
+  geom_freqpoly(aes(color = cut), binwidth = .1, linewidth = 0.75)
+
+ggplot(diamonds, aes(x = carat, y = after_stat(density))) + # this one displays density
+  geom_freqpoly(aes(color = cut), binwidth = .1, linewidth = 0.75)
+
+```
+
+#### Box plots
+
+We talked about these a lot this week :)
+
+```{r}
+
+ggplot(diamonds, aes(y = carat)) +
+  geom_boxplot()
+
+ggplot(diamonds, aes (x = cut, y = price)) +
+  geom_boxplot()
+
+```
+
+#### Violin plots
+
+Use when you want to visualize the distribution of a continuous variable across different categories and also show density. Violin plots allow you to see the distribution shape, central tendency, and variability of the data.
+
+```{r}
+
+ggplot(diamonds, aes(x = cut, y = carat)) + 
+  geom_violin()
+
+```
+
+#### Count plot
+
+Use count plots when you have overlapping observations and want to size points by frequency. Often used for two categorical variables, or one categorical and one discrete/numeric variable with limited values.
+
+These are sometimes called "bubble plots" – bigger circles = more overlapping observations.
+
+```{r}
+
+ggplot(diamonds, aes(x = cut, y = carat)) + # this is called a count plot
+  geom_count()
+
+ggplot(diamonds, aes(x = cut, y = color)) +
+  geom_count()
+
+```
+
+#### Heatmap
+
+Use to create a grid-based visualization where values are represented in a two-dimensional space. There are few different ways, but this one is quick and easy
+
+```{r}
+
+diamonds |> 
+  count(color, cut) |>  
+  mutate(color = fct_rev(color)) |>
+  ggplot(aes(x = color, y = cut)) +
+  geom_tile(aes(fill = n))
+
+#brighter = more
+```
+
+## Summary tables are a deliverable too
+
+Plots are one way to communicate what you found. A clean summary table is the other, and your assignment asks for both.
+
+#### Grouped summaries
+
+`group_by()` + `summarise()` is the workhorse. Group by a categorical variable, then compute your numeric summaries within each group:
+
+```{r}
+
+diamonds |> 
+  group_by(cut) |> 
+  summarise(
+    n            = n(),
+    mean_price   = mean(price),
+    median_price = median(price),
+    sd_price     = sd(price),
+    mean_carat   = mean(carat)) |> 
+  arrange(desc(mean_price))
+
+#GOOD TO UNDERSTAND WHAT'S IN DATA
+#USE THIS PLEASE
+```
+
+Now compare that table to the boxplot of the same thing:
+
+```{r}
+
+ggplot(diamonds, aes(x = cut, y = price)) +
+  geom_boxplot() +
+  labs(title = "Price by cut quality", x = "Cut", y = "Price (USD)")
+
+```
+
+**Question!** Which one would you hand to a client, and what does each one hide?
+
+Answer: The table gives exact, reportable numbers but hides shape entirely — you can't see the skew, the long upper tail, or the outliers. The boxplot shows shape and outliers but gives you no precise values and no sample sizes. In practice you usually want both, which is why the assignment asks for both.
+
+#### Summarizing many columns at once with `across()`
+
+If you want the same summary for every numeric column, `across()` saves you a lot of typing:
+
+```{r}
+
+diamonds |> 
+  summarise(across(where(is.numeric), list(mean = mean, sd = sd)))
+
+```
+
+This is powerful, and it's also the fastest way in R to produce a table that looks authoritative and tells you almost nothing. Use it to *explore*, then pick the two or three numbers that actually matter and report those.
+
+#### `count()` for categorical variables
+
+```{r}
+
+diamonds |> 
+  count(cut, sort = TRUE)
+
+diamonds |> 
+  count(cut, color) # counts of every combination
+
+```
+
+## Putting it together
+
+For the assignment, you'll do this whole sequence on a dataset of your own choosing:
+
+1.  Read it in and clean the column names.
+
+2.  Preview it (`skimr::skim()`, `summary()`, `head()`).
+
+3.  Check and fix variable classes.
+
+4.  Summarize: `count()` your categorical variables, and get center and spread for at least one numeric variable.
+
+5.  Make at least four different plot types, each labeled with `labs()`, each with an interpretation.
+
+6.  Say what the numbers alone would have missed.
+
+## For fun
+
+Here are examples of a mosaic plot and a 2d density plot.
+
+#### Mosaic plot
+
+A mosaic plot is a graphical representation of the relationship between two or more categorical variables.
+
+```{r}
+
+install.packages("vcd") # do this first!
+library(vcd)
+
+# make a contingency table
+diamond_table <- xtabs(~ cut + color, data = diamonds)
+
+# build the mosaic plot
+mosaic(diamond_table, shade = TRUE, legend = TRUE,
+       labeling_args = list(set_varnames = c(cut = "Cut", color = "Color")))
+
+```
+
+#### 2D Density Plot
+
+Use this to visualize the density of points in a two-dimensional space.
+
+A 2D density plot shows where points are concentrated in a scatterplot. The lines (sometimes shaded in) are like a topographic map: each contour encloses a region with higher density of points. The tighter the lines and the darker the color (when using `geom_density_2d_filled()`), the more observations are packed into that space.
+
+Compare it to the scatterplot of the same variables–the 2D density plot summarizes the "cloud" of points so you can more easily see patterns and clusters, especially when there's heavy overplotting.
+
+```{r}
+
+ggplot(diamonds, aes(x = carat, y = price)) + # 2D density plot
+  geom_density2d()
+
+ggplot(diamonds, aes(x = carat, y = price)) + # compare to scatterplot, same data
+  geom_point(alpha=0.1)
+
+ggplot(diamonds, aes(x = carat, y = price, color = cut)) + # 2D density plot
+  geom_density2d()
+
+ggplot(diamonds, aes(x = carat, y = price, color = cut)) + # compare to scatterplot again
+  geom_point(alpha=0.1)
+
+```

@@ -281,6 +281,8 @@ ggplot(pokedata, aes(x = defense)) +
 ggplot(pokedata, aes(x = defense, y = after_stat(density))) + 
   geom_freqpoly(aes(color = generation), binwidth = 15, linewidth = 0.75)
 
+#everything under the curve is 1 so is the same plane
+#example would be comparing weight lifting; more impressive if someone smaller/lower mass can lift the same amount, if not more, thean someone heavier
 ```
 
 ## `diamonds` data
@@ -335,8 +337,10 @@ Looks like there are other factors that could affect `price` – not just `cut`.
 #| label: scatter plot of carat x price
 
 # try making the points transparent to 0.05
-
-
+ggplot(data = diamonds, aes(x = carat, y = price)) +
+  geom_point(alpha = 0.05)
+  #shows concentration/trend
+# carat = weight of stone
 ```
 
 We can see the general trends, but it's a bit difficult to really see what is going on. Back to boxplots!
@@ -361,7 +365,8 @@ But if you want to compare `price` across *ranges* of `carat`, you can do that b
 #| label: box plot carat x price (corrected with increments!)
 
 ggplot(diamonds, aes(x = carat, y = price)) +
-  geom_boxplot(aes(group = cut_width(carat, 1))) # note cut_width() 
+  geom_boxplot(aes(group = cut_width(carat, 1))) # note cut_width()
+                                                #look at carat for every 1 unit
 
 ggplot(diamonds, aes(x = carat, y = price)) +
   geom_boxplot(aes(group = cut_width(carat, 0.5)))
@@ -388,7 +393,7 @@ diamonds |>
 
 # color x carat now
 diamonds |>
-  mutate(color = fct_rev(color)) |> 
+  mutate(color = fct_rev(color)) |> # reverses plot
   ggplot(aes(x = color, y = carat)) +
   geom_boxplot()
 ```
@@ -405,12 +410,13 @@ ggplot(data = diamonds, aes(x = clarity, y = price)) +
   geom_boxplot()
 
 # clarity x carat
-
+ggplot(data = diamonds, aes(x = clarity, y = carat)) +
+  geom_boxplot()
 ```
 
-What is the relationship here?
+What is the relationship here
 
-For `color` and `clarity`, is there more visible variation or covariation?
+For `color` and `clarity`, is there more visible variation or covariation? SKIPPED FOR NOW 9/18/26
 
 Let's not forget about `cut`! Is there a relationship between `cut` and `carat`? `cut` is categorical and `carat` is numeric, and we can plot the two together easily
 
@@ -418,17 +424,20 @@ Let's not forget about `cut`! Is there a relationship between `cut` and `carat`?
 #| label: explore cut
 
 # box plot of cut x price
-
+ggplot(data = diamonds, aes(x = cut, y = price)) +
+  geom_boxplot()
 
 # box plot of cut x carat
-
+ggplot(data = diamonds, aes(x = cut, y = carat)) +
+  geom_boxplot()
 
 # count plot
-
+ggplot(data = diamonds, aes(x = cut, y = carat)) +
+  geom_count()
 
 # violin plot
-
-
+ggplot(data = diamonds, aes(x = cut, y = price)) +
+  geom_violin()
 ```
 
 Notice that the violin plot shows you something the boxplot hides: the actual shape of each distribution.
@@ -449,7 +458,14 @@ Between `color`, `clarity`, and `carat`, which do you think is the best predicto
 
 #### Conclusions:
 
-The variable with the most influence on price is \_\_\_.
+The variable with the most influence on price is carat. There may be a trade-off etween cart and cut, as well as other variables. Perhpas larger carat diamonds can be profitably sold even with a low quality cut, for example.
+
+```{r}
+
+summary (lm(price ~ cut + color + clarity + carat, data = diamonds))
+#est std is actual value difference between each tier
+#this is for DS 300 level class; not needed atm
+```
 
 ### Reflection
 
