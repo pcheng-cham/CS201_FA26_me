@@ -1,0 +1,303 @@
+---
+title: "TEDS-D Treatment Mapping"
+author: "Amber Camp" 
+date: "`r Sys.Date()`"
+format: html
+editor: visual
+---
+
+## Load Packages
+
+If you don't have the below packages, run the relevant lines here:
+
+```{r}
+#| label: install-packages
+
+# we'll use all of these this week, but selectively load a few today
+
+###don't need to use these anymore once done
+# install.packages("sf")
+# install.packages("remotes") # used to install packages from github
+# remotes::install_github("UrbanInstitute/urbnmapr")
+# install.packages("naniar")
+# install.packages("ggiraph")
+```
+
+Load packages (all of them).
+
+```{r}
+#| label: load-packages
+#| message: false
+#| warning: false
+
+library(tidyverse)
+library(janitor) 
+library(naniar) # tools for exploring and visualizing missing data
+library(plotly) # makes finished ggplot charts interactive
+options(scipen = 99) # turns off scientific notation
+```
+
+## Today's Data
+
+The data we will analyze today is the 2024 Treatment Episode Data Set-Discharges (TEDS-D) Dataset from the Substance Abuse and Mental Health Services Administration (SAMHSA). The metadata can be found [here](https://www.samhsa.gov/data/system/files/media-puf-file/TEDS-D-2024-DS0001-info-codebook_v1_0.pdf) CODE BOOK HERE
+
+This is a huge dataset! Almost 1.3 million discharge records and 76 variables. SAMHSA distributes it as an `.rdata` file, which we read in with `load()`.
+
+`load()` works differently from functions like `read_csv()`. It doesn't hand the data back to you. Instead, it recreates the saved object in your environment under whatever name it was *originally saved with*, and returns that name as text. We capture the name so we can grab the object with `get()`.
+
+```{r}
+#| label: load-data
+
+loaded <- load("data/tedsd_puf_2024.rdata")
+
+loaded # what was the object called?
+
+teds_d <- get(loaded)
+rm(list = loaded) # remove the extra copy from your environment
+
+dim(teds_d)
+```
+
+### Keep only what we need
+
+The full dataset takes up nearly a gigabyte of memory. Big datasets are common in the real world, and a good habit is to keep only the columns you actually need as early as possible. That makes everything after this step faster.
+
+```{r}
+#| label: select-data
+
+teds_d <- teds_d %>%
+  clean_names() %>% # janitor
+  select(stfips, freq1_d, services_d, los, reason) # only focusing on these this week
+
+head(teds_d)
+```
+
+### Columns for today's class
+
+- `freq1_d` = Frequency of use at discharge
+
+- `stfips` = State FIPS code (FIPS = *Federal Information Processing Standard)*
+
+- `services_d` = Treatment Service
+
+- `los` = Length of Stay
+
+- `reason` = Reason for Discharge
+
+### NA Analysis
+
+What data is missing? Examine and visualize below with `naniar`
+
+```{r}
+#| label: missing-data-w-naniar
+
+miss_var_summary(teds_d)
+
+gg_miss_var(teds_d)
+
+teds_d %>%
+  slice_sample(n = 500) %>% # from dplyr
+  vis_miss() # from naniar
+```
+
+There actually is more missing data than the above would suggest... Let's view a table summary.
+
+```{r}
+#| label: freq1_d-table
+
+teds_d %>% 
+  tabyl(freq1_d) # from janitor package
+```
+
+How does the documentation label missing data? Replace values as needed.
+
+With a dataset this size, we replace the missing codes one column at a time with `na_if()`. A shortcut like `teds_d[teds_d == -9] <- NA` compares every cell at once and can freeze your laptop on 1.3 million rows.
+
+```{r}
+#| label: replace-missing-codes
+
+teds_d <- teds_d %>%
+  mutate(across(everything(), ~ na_if(.x, -9)))
+    #.x is where we are atm, ~ is what to do
+
+# read like this:
+# "Take teds_d, and then mutate it: across every column, replace -9 with NA. 
+# Save the result back as teds_d."
+
+# Note: the ~ says "here's what to do to each column," 
+# and .x means "the column we're on right now"
+```
+
+Inspect once again.
+
+```{r}
+#| label: inspect-missing-values
+
+miss_var_summary(teds_d)
+
+teds_d %>% 
+  tabyl(freq1_d)
+```
+
+Now check `reason`. Does it have any missing values in the 2024 data? Does that match what the codebook says?
+
+```{r}
+#| label: inspect-reason-code
+
+miss_var_summary(teds_d)
+
+teds_d %>% 
+  tabyl(reason)
+
+```
+
+### Variable Re-coding
+
+Many of the variables are currently in a format that is not helpful for our analyses.
+
+#### Frequency of Use at Discharge
+
+Start by inspecting this variable. Next, look up the Frequency of Use at Discharge variable in the codebook (`freq1_d`)
+
+```{r}
+#| label: variable-recoding-freq1_d
+
+class(teds_d$freq1_d)
+  #look at this variable; check class
+summary(teds_d$freq1_d)
+  #summary of data frame
+
+teds_d <- teds_d %>%
+  mutate(freq1_d = recode(as.character(freq1_d),
+                          "1" = "no use",
+                          "2" = "some use",
+                          "3" = "daily use",
+                          .missing = "unknown"),
+         freq1_d = factor(freq1_d))
+
+# "Turn the codes into text, swap each code for its label (and call missing ones 'unknown'),
+# then treat the result as a category (factor)."
+
+teds_d %>% 
+  tabyl(freq1_d) 
+```
+
+#### Services
+
+Apply the relevant recoding for `services_d`
+
+```{r}
+#| label: variable-recoding-services_d
+
+class(teds_d$services_d)
+#look at this variable; check class
+summary(teds_d$services_d)
+#summary of data frame
+
+teds_d <- teds_d %>%
+  mutate(services_d = recode(as.character(services_d),
+                          "1" = "Detox, 24-hour, hospital inpatient",
+                          "2" = "Detox, 24-hour, hospital inpatient",
+                          "3" = "Rehab/residential, hospital (non-detox)",
+                          "4" = "Rehab/residential, short term (30 days or fewer)",
+                          "5" = "Rehab/residential, long term (more than 30 days)",
+                          "6" = "Ambulatory, intensive outpatient",
+                          "7" = "Ambulatory, non-intensive outpatient",
+                          "8" = "Ambulatory, detoxification",
+                          .missing = "unknown"),
+         services_d = factor(services_d))
+
+# "Turn the codes into text, swap each code for its label (and call missing ones 'unknown'),
+# then treat the result as a category (factor)."
+
+teds_d %>% 
+  tabyl(services_d) 
+
+
+```
+
+#### Reason
+
+Apply the relevant recoding for the Reason for Discharge variable.
+
+```{r}
+#| label: variable-recoding-reason
+
+class(teds_d$reason)
+#look at this variable; check class
+summary(teds_d$reason)
+#summary of data frame
+
+teds_d <- teds_d %>%
+  mutate(reason = recode(as.character(reason),
+                          "1" = "Treatment completed",
+                          "2" = "Dropped out of treatment",
+                          "3" = "Terminated by facility",
+                          "4" = "Transferred to another treatment program or facility",
+                          "5" = "Incarcerated",
+                          "6" = "Death",
+                          "7" = "Other",
+                          .missing = "unknown"),
+         reason = factor(reason))
+
+# "Turn the codes into text, swap each code for its label (and call missing ones 'unknown'),
+# then treat the result as a category (factor)."
+
+teds_d %>% 
+  tabyl(reason) 
+
+```
+
+## Quick Plotting Exercise
+
+Use `plotly` to create three basic visualizations using `ggplot2` and the variables you recoded above (`freq1_d`, `services_d`, and `reason`). Bar plots are a good idea :)
+
+Tips:
+
+- use `fct_infreq()` around your `x` variable to organize in descending order of count
+
+- try using `coord_flip()` for a horizontal view
+
+- don't forget an axis label!
+
+```{r}
+#| label: plots
+
+freq_p <- ggplot(data = teds_d, aes(x = fct_infreq(freq1_d))) +
+  geom_bar() +
+  coord_flip() + # not required
+  labs(x = "Frequency of Use at Discharge")
+
+ggplotly(freq_p)
+
+###
+services_p <- ggplot(data = teds_d, aes(x = fct_infreq(services_d))) +
+  geom_bar() +
+  coord_flip() + # not required
+  labs(x = "Treatment Service")
+
+ggplotly(services_p)
+
+###
+reason_p <- ggplot(data = teds_d, aes(x = fct_infreq(reason))) +
+  geom_bar() +
+  coord_flip() + # not required
+  labs(x = "Reason for discharge")
+
+ggplotly(reason_p)
+```
+
+## Do before Wednesday's Class
+
+### Save your new dataframe
+
+You've put a lot of work into cleaning up this dataframe! Once you're done recoding everything, save it to a new `.rds` file so that you can simply read it in on Wednesday! (`.rds` files store a single R object, and they keep your factors intact.)
+
+Have this done before class on Wednesday.
+
+```{r}
+#| label: save-dataframe
+
+saveRDS(teds_d, "data/teds_d_clean.rds")
+#
+```
