@@ -1,0 +1,203 @@
+---
+title: "Assignment 5: Substance Use Treatment Mapping"
+subtitle: "STUDENT NAME"
+author: "Amber Camp"
+date: "`r Sys.Date()`"
+format: html
+editor: visual
+toc: true
+---
+
+## Overview
+
+Due: **Friday 10/2, 11:59pm**
+
+In this assignment, you will apply analytic and mapping skills to the 2024 TEDS-D dataset from SAMHSA.
+
+Refer to the following files for reference, though some of what is asked of you here will require logic beyond what we discussed in class:
+
+- week06-treatment-mapping-part1.qmd
+
+- week06-treatment-mapping-part2.qmd
+
+**Before you start:** keep the [codebook](https://www.samhsa.gov/data/system/files/media-puf-file/TEDS-D-2024-DS0001-info-codebook_v1_0.pdf) open in another tab. Every question below depends on knowing what the values in a column actually mean. Don't assume — look it up.
+
+**Time estimate:** about three-four hours total. Question 1 should take you ten minutes. If you are stuck on one thing for more than twenty minutes, ask your classmates or get in touch with me. Being stuck is normal. Staying stuck quietly by yourself is not :)
+
+## Load Packages and Data
+
+```{r}
+#| label: setup
+#| message: false
+#| warning: false
+
+library(tidyverse)
+library(janitor)
+library(sf) # "simple features" for spatial data
+library(urbnmapr) # access to US state/country shapefiles for mapping
+library(ggiraph) # makes ggplot charts interactive
+options(scipen = 99) # turns off scientific notation
+```
+
+This is the cleaned dataset you saved at the end of Part 1.
+
+```{r}
+#| label: read-data
+
+teds_d <- readRDS("data/teds_d_clean.rds")
+```
+
+## Question 1: Warm-up
+
+Before mapping anything, get oriented in the data.
+
+a)  Using `tabyl()`, show the breakdown of `reason` (reason for discharge). Which reason is most common, and what percentage of all discharges does it account for?
+
+b)  Make one bar chart showing the number of discharges by `services_d` (type of treatment service). Give it an informative title and axis labels.
+
+c)  In a sentence or two: what does the `reason` value "Transferred to another treatment program or facility" mean for our completion percentages? If a state transfers a lot of patients, would its completion rate look higher or lower than a state that transfers very few?
+
+> **Full credit:** a working `tabyl()`, a readable labeled bar chart, and a sentence or two showing you thought about part (c). There is no trick in this question!
+
+```{r}
+#| label: q1
+
+### Using tabyl(), show the breakdown of reason (reason for discharge). Which reason is most common, and what percentage of all discharges does it account for?
+class(teds_d$reason)
+#look at this variable; check class
+summary(teds_d$reason)
+#summary of data frame
+
+teds_d <- teds_d %>%
+  mutate(reason = recode(as.character(reason),
+                         "1" = "Treatment completed",
+                         "2" = "Dropped out of treatment",
+                         "3" = "Terminated by facility",
+                         "4" = "Transferred to another treatment program or facility",
+                         "5" = "Incarcerated",
+                         "6" = "Death",
+                         "7" = "Other",
+                         .missing = "unknown"),
+         reason = factor(reason))
+# ////////////////////////////////////////////////////////////////////////////
+# "Turn the codes into text, swap each code for its label (and call missing ones 'unknown'),
+# then treat the result as a category (factor)."
+
+teds_d %>% 
+  tabyl(reason) %>%
+  arrange(desc(n)) %>%  # arranges in descending order
+  adorn_pct_formatting(digit = 2) # rounds to 2 decimal digits
+
+#////////////////////////////////////////////////////////////////////////////
+### Make one bar chart showing the number of discharges by services_d (type of treatment service). Give it an informative title and axis labels.
+
+freq_p <- ggplot(data = teds_d, aes(x = fct_infreq(services_d))) +
+  geom_bar() +
+  coord_flip() + # flips cooordinates; can use y = within aes() instead too
+  labs(x = "Type of treatment service")
+ggplotly(freq_p)
+
+###EASY/SIMPLE VERSION
+ggplot(teds_d, aes(y = fct_infreq(services_d))) +  #changed "x" to "y" for different bar orientation
+  geom_bar()
+
+###AMBER VERSION
+ggplot(teds_d, aes(y = fct_infreq(services_d))) + #changed y to servies instead of x
+  geom_bar() +
+  scale_x_continuous(labels = scales::label_comma()) + #adds commands to values on axis
+  labs(title = "Treatment Discharges by Type of Service, 2024 TEDS-D",
+       x = "Number of discharges",
+       y = "Type of treatment servive") +
+  theme_minimal()
+
+### In a sentence or two: what does the reason value "Transferred to another treatment program or facility" mean for our completion percentages? If a state transfers a lot of patients, would its completion rate look higher or lower than a state that transfers very few?
+
+# overall % of each is higher due to less overall patients within record
+# if they stay in data set, doesn't change much
+
+```
+
+**Answer to (a):**
+
+**Answer to (b):** (produce a bar chart in the code chunk above)
+
+**Answer to (c):**
+
+## Question 2: Mapping no use at discharge
+
+Make **one [*interactive*]{.underline} map** with `ggiraph` showing, for each state, the percentage of [completed treatment]{.underline} episodes that ended with [no use at discharge]{.underline}.
+
+In other words: among the episodes where `reason` is "Treatment completed," what share had `freq1_d` equal to "no use"?
+
+Work through this in bite-sized steps, like we did in Part 2. You will need to filter, group, summarize, build an index, join, and plot. Write one step at a time and look at the result before moving on.
+
+### The denominator decision
+
+About a third of the `freq1_d` values in this dataset are "unknown." That means you have to decide what your denominator is, and there is more than one defensible answer:
+
+- **All** completed episodes, counting "unknown" in the denominator, or
+
+- Only completed episodes where frequency of use was **actually recorded**.
+
+Pick one. **Below your map, write one sentence saying which denominator you used and why.** Either choice can earn full credit. Missing description earns no points for this portion.
+
+### Your map must:
+
+- be interactive (rendered with `girafe()`)
+
+- show a tooltip with the state name and the percentage, rounded to two decimal places
+
+- have a title and a legend label that say what is being shown
+
+- handle states with no data honestly (remember Friday in class)
+
+> **Full credit:** one interactive map meeting the four requirements above, plus your denominator sentence. It does not have to be beautiful, only correct and readable.
+
+```{r}
+#| label: q2
+
+```
+
+**Denominator I used, and why:**
+
+## Question 3: Service type and length of stay
+
+Treatment outcomes can vary depending on the type of service a patient receives and how long they stay in treatment.
+
+Investigate how **completion rates** differ across **service type** (`services_d`) and **length of stay** (`los`).
+
+- Create **two** visualizations: at least one focused on service type, and at least one focused on length of stay. These do not need to be maps, and they do not need to be interactive. Pick whatever chart type makes the pattern easiest to see.
+
+- Then write a short summary (3-ish sentences, full grammatical sentences) explaining the main patterns you observe.
+
+**One warning:** look up `los` in the codebook *before* you calculate anything with it. Code that runs without an error can still give you a meaningless answer.
+
+> **Full credit:** two labeled visualizations that actually show the comparison you say they show, plus a summary that describes a real pattern in your own output. You are not graded on finding the "right" pattern. You are graded on whether your summary matches your charts.
+
+```{r}
+#| label: q3
+
+```
+
+**Summary:**
+
+## Extra Credit (optional, up to 2 pts)
+
+#### Again, this is meant to *stretch* you, not *stress* you!
+
+Make one visualization that shows service type and length of stay **together**–that is, how completion rate varies across both at once. Faceting is one way, but there are others.
+
+Then, in a sentence, say what this combined view shows that your two separate charts in Question 3 could not.
+
+```{r}
+#| label: extra-credit
+
+```
+
+**What the combined view adds:**
+
+------------------------------------------------------------------------
+
+## Push to GitHub AND submit link on Canvas!
+
+Assignment is due **Friday 10/2, 11:59pm**.

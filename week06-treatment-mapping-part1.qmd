@@ -244,7 +244,7 @@ teds_d <- teds_d %>%
 # then treat the result as a category (factor)."
 
 teds_d %>% 
-  tabyl(reason) 
+  tabyl(reason)
 
 ```
 
@@ -265,7 +265,7 @@ Tips:
 
 freq_p <- ggplot(data = teds_d, aes(x = fct_infreq(freq1_d))) +
   geom_bar() +
-  coord_flip() + # not required
+  coord_flip() + # not required; flips coordinates
   labs(x = "Frequency of Use at Discharge")
 
 ggplotly(freq_p)
