@@ -1,6 +1,6 @@
 ---
 title: "Assignment 4: Exploratory Data Analysis"
-author: "Your Name"
+author: "Patrick Cheng"
 date: "`r Sys.Date()`"
 format: html
 editor: visual
@@ -29,25 +29,40 @@ Part 1 is worth a total of 1 point, and Part 2 is worth 4 points (1 point for ea
 
 ```{r, message=FALSE}
 library(tidyverse)
+# need library(dplyr) for filter function, but is already contained within tidyverse, so not needed; would be redundant
 
 # mydata <- read_csv("data/your_dataset.csv")
+#| label: load data
+#taken from 
+  #https://www.kaggle.com/datasets/shreyashautomation/pokemon-stats-dataset
+rawData <- read_csv("data/pokemon_complete_stats.csv")
 
+#myData <- rawData |> 
+#  clean_names()
+###doesn't need since already cleaned
 ```
 
 ### Describe your data
 
-Data author:
+Data author: Shreyash Mishra
 
-Link:
+Link: <https://www.kaggle.com/datasets/shreyashautomation/pokemon-stats-dataset>
 
-Description:
+Description: Complete Pokemon Stats & Attributes Archive\
+This dataset contains comprehensive stats, physical characteristics, and lore attributes for over 1300+ Pokemon (including various forms). It's an excellent playground for Data Analysis (EDA), Data Visualization, and Machine Learning tasks.
 
 ### Preview your data
 
 Use some of the strategies you've learned in this class or picked up elsewhere to summarize and quickly explore your data.
 
 ```{r}
+#data("rawData")
+head(rawData) #lists first 5 entries
+tail(rawData) #lists last 5 entries
+summary(rawData) #gives summary of data
 
+view(rawData) #opens full dataset in a different window
+rawData #displays dataset inline
 ```
 
 ### Summary stats
@@ -63,10 +78,124 @@ Before you make plots, you must also:
   - Remember to use `na.rm = TRUE` if you have missing values that affect summaries!
 
 ```{r}
+### check for NA/invalid values within dataset
+sum(is.na(rawData))
 
+### since there are NA values, check where they are located to see if actually invalid values
+## checking each individual column for where NA/invalid values
+# sum(is.na(rawData$id))
+# sum(is.na(rawData$name))
+# sum(is.na(rawData$height_dm))
+# sum(is.na(rawData$weight_hg))
+# sum(is.na(rawData$base_experience))
+# sum(is.na(rawData$type_1))
+# 
+# sum(is.na(rawData$type_2))
+# 
+# sum(is.na(rawData$hp))
+# sum(is.na(rawData$attack))
+# sum(is.na(rawData$defense))
+# sum(is.na(rawData$special_attack))
+# sum(is.na(rawData$special_defense))
+# sum(is.na(rawData$speed))
+# sum(is.na(rawData$abilities))
+# sum(is.na(rawData$generation))
+# sum(is.na(rawData$is_legendary))
+# sum(is.na(rawData$is_mythical))
+# sum(is.na(rawData$color))
+# sum(is.na(rawData$shape))
+# sum(is.na(rawData$capture_rate))
+
+## more efficient way to counta NA values per column
+colSums(is.na(rawData))
+    # lookup later how to use apply() with is.na()
+
+## redundant due to tidyverse
+#library(dplyr)
+
+### checking for why there are NA values
+### total invalids are 649;
+###   586 are from type_2, which is fine since some Pokemon only have 1 type;
+###   649 - 586 = 63 remaining; try to find pattern within base_experience (49) AND abilities (14)
+
+##double checking values for both base_experience and abilities for correct count of NA
+rawData %>%
+  filter(is.na(base_experience)) %>%
+  count()
+rawData %>%
+  filter(is.na(abilities)) %>%
+  count()
+
+## checking if legendaries/mythicals are the reason why exp isn't granted
+rawData %>%
+  filter(is.na(base_experience), is_legendary == "TRUE" | is_mythical == "TRUE") %>%
+  count()
+rawData %>%
+  filter(is.na(base_experience), is_legendary == "TRUE" | is_mythical == "TRUE")
+# count is only 6, which is much lower than 49, so proven false that legendaries and mythicals don't grant exp
+# however, noticed pattern that all of them are "mega"
+
+## checking "mega" entry count
+# both redunant since they're part of tidyverse
+#library(dplyr)
+#library(stringr)
+rawData %>%
+  filter(is.na(base_experience), str_detect(name, "mega")) %>%
+  count()
+# 49 count matches the 49 that don't grant experience, so that determines the 49 invalid entries within experience column
+
+# not quite conclusion, so checking to see how many entries of "mega" Pokemon there are
+rawData %>%
+  filter(str_detect(name, "mega")) %>%
+  count()
+
+# since there are 99 entries of "mega" Pokemon, which is more than the 49 with invalid/null base experience, not sure why this is the case, but will just assume that those entries are okay for now (or just don't use that column for this exercise).
+# addendum: tried looking it up, but didn't find anything again.
+
+## no hypothesis for abilities being null, so will look at those entries to try look for reason/pattern
+rawData %>%
+  filter(is.na(abilities))
+# all entries are "mega" as well, so it may have something to do with the fact that they're "mega", or evolved.
+# addendum: the "abilities" column are for abilties gained upon the entry existing; previous abilities from prior form(s) are generally kept, as all Pokemon have abilities.
+
+##### Conclusion: data should be valid as it is sourced from PokeAPI, which is maintained and expanded by an open-source community.
+```
+
+```{r}
+###Remember to use na.rm = TRUE if you have missing values that affect summaries!
+###Show basic summaries of your dataset, including:
+##count() for categorical variables (to see category frequencies)
+
+#display the count of total different Pokemon within each generation, sorted from greatest to least
+rawData %>%
+  count(generation, sort = TRUE)
+
+##mean(), median(), sd(), min(), max() for at least one numeric variable
+#rawData %>%     ######doesn't quite work due to no sd()
+#  summary(rawData$capture_rate)
+
+mean(rawData$capture_rate)
+median(rawData$capture_rate)
+sd(rawData$capture_rate)
+min(rawData$capture_rate)
+max(rawData$capture_rate)
+
+#OR
+rawData %>%
+  summarise(mean = mean(capture_rate),
+            median = median(capture_rate),
+            sd = sd(capture_rate),
+            min = min(capture_rate),
+            max = max(capture_rate))
+#tldr: lower capture_rate number, the more difficult it is to capture, and vice versa.
+#non-tldr: the value is put through a very specific equation that uses variables based on other factors, such as remaining HP, status effects, the quality of the pokeball used, etc, but it is still ultimately affected by the base capture_rate.
 ```
 
 Write 2–3 sentences here: What do the category counts tell you? What does the numeric summary show about spread, center, or outliers?
+
+Category count of the generation table tells us that the first generation of Pokemon had the most unique roster of new Pokemon. This is the case since many of the subsequent generations may have overlaps from that generation, in one way or another.
+
+The numeric summary shows that Pokemon are generally more difficult to catch than easier to catch.
 
 ## Part 2: Visualize Your Data
 
@@ -85,46 +214,74 @@ Use the EDA Part 3 notes as your reference. Since this is an EDA assignment, you
 ### Plot 1
 
 ```{r}
-# insert code here
-
+ggplot(rawData, aes(x = capture_rate)) +
+  geom_histogram(binwidth = 5) + #changes width of each bar to value of 5 to properly display data that was given from dataset
+  coord_flip() +
+  labs(title = "Capture Rate of Pokemon",
+       x = "Base Capture Rate Modifier",
+       y = "Count Per Capture Rate")
 ```
 
-Question this plot answers:
+Question this plot answers: Are Pokemon generally more easy or difficult to capture?
 
-Interpretation:
+Interpretation: Most of the data being counted is towards the lower end of the capture rate value. This means that majority of Pokemon innately have a lower capture rate.\
+Additionally, there are some values that seem to stand out more than the others, probably due to being the "more common/easier" bunch of Pokemon that you would more commonly encounter in each new region possibly sharing the same base capture rate value.
 
 ### Plot 2
 
 ```{r}
-# insert code here
-
+ggplot(rawData, aes(x = attack, y = special_attack)) +
+  geom_point(alpha = 0.5) +
+  labs(
+    title    = "Comparison of Pokemon's attack vs special attack",
+    #subtitle = ""
+    x        = "Attack",
+    y        = "Special Attack"
+    #color    = "element here???",
+    #caption  = "Source: refer to prior link"
+    )
 ```
 
-Question this plot answers:
+Question this plot answers: For balancing purposes (e.g. "power budget"), does the attack of a Pokemon relate disproportionally to their special attack stat?
 
-Interpretation:
+Interpretation: Seemingly, it appears to either be the opposite; there seems to be a trend of a Pokemon's attack scaling proportionally to their special attack.\
+Perhaps the balancing would moreso affect their defensive stats instead to compensate (e.g. a very squishy but high damaging Pokemon vs a lower damage but tankier Pokemon).
 
 ### Plot 3
 
 ```{r}
-# insert code here
-
+ggplot(rawData, aes(x = generation)) +
+  geom_bar() +
+  labs(
+    title    = "Total count of Pokemon per Generation",
+    x        = "Generation",
+    y        = "Count"
+    )
 ```
 
-Question this plot answers:
+Question this plot answers: Which generation had the most amount of unique Pokemon?
 
-Interpretation:
+Interpretation: Generation 1 had the most amount of unique Pokemon. This is probably due to subsequent versions also including some of generation 1's roster in their own, on top of adding their own variations/special evolutions to certain Pokemon (Eevee being a prime example).
 
 ### Plot 4
 
 ```{r}
-# insert code here
+# 2. Count the frequencies of each category
+pokemonByType1 <- table(rawData$type_1)
 
+#labels with percetnages; LOOKED UP HOW TO DO THIS
+myPercentage <- round(100 * pokemonByType1 / sum(pokemonByType1), 1)
+pie_labels <- paste0(names(pokemonByType1), " (", myPercentage, "%)")
+
+pie(pokemonByType1,
+    labels = pie_labels,
+    main = "Pokemon by Type"
+)
 ```
 
-Question this plot answers:
+Question this plot answers: What is the most common primary type of a Pokemon?
 
-Interpretation:
+Interpretation: Water has the highest % (11.8%) and slice size, so it is the most common primary type of Pokemon to exist. This also takes into consideration of evolutions, which may possibly skew data due to evolutions (usually) maintaining the same primary type.
 
 ------------------------------------------------------------------------
 
