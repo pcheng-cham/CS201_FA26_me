@@ -1,6 +1,6 @@
 ---
 title: "Assignment 5: Substance Use Treatment Mapping"
-subtitle: "STUDENT NAME"
+subtitle: "Patrick Cheng"
 author: "Amber Camp"
 date: "`r Sys.Date()`"
 format: html
@@ -60,7 +60,7 @@ c)  In a sentence or two: what does the `reason` value "Transferred to another t
 > **Full credit:** a working `tabyl()`, a readable labeled bar chart, and a sentence or two showing you thought about part (c). There is no trick in this question!
 
 ```{r}
-#| label: q1
+#| label: q1.a
 
 ### Using tabyl(), show the breakdown of reason (reason for discharge). Which reason is most common, and what percentage of all discharges does it account for?
 class(teds_d$reason)
@@ -87,11 +87,21 @@ teds_d %>%
   tabyl(reason) %>%
   arrange(desc(n)) %>%  # arranges in descending order
   adorn_pct_formatting(digit = 2) # rounds to 2 decimal digits
+```
 
+```{r}
+#| label: q1.b
 #////////////////////////////////////////////////////////////////////////////
 ### Make one bar chart showing the number of discharges by services_d (type of treatment service). Give it an informative title and axis labels.
 
-freq_p <- ggplot(data = teds_d, aes(x = fct_infreq(services_d))) +
+##loads packages if not done so already
+library(tidyverse)
+library(janitor) 
+library(naniar) # tools for exploring and visualizing missing data
+library(plotly) # makes finished ggplot charts interactive
+
+###MY VERSION
+freq_p <- ggplot(data = teds_d, aes(x = fct_infreq(services_d))) + #fct_infreq sorts by largest to smallest
   geom_bar() +
   coord_flip() + # flips cooordinates; can use y = within aes() instead too
   labs(x = "Type of treatment service")
@@ -114,14 +124,48 @@ ggplot(teds_d, aes(y = fct_infreq(services_d))) + #changed y to servies instead 
 
 # overall % of each is higher due to less overall patients within record
 # if they stay in data set, doesn't change much
-
 ```
 
-**Answer to (a):**
+**Answer to (a): refer to label: q1.a**
 
 **Answer to (b):** (produce a bar chart in the code chunk above)
 
-**Answer to (c):**
+**Answer to (c):** "Transferred to another treatment program or facility" may or may not mean something for the completion percentages, depending on how the "Transferred to (...)" designation is handled.
+
+|  |  |  |
+|----|----|----|
+| **is treatment complete** | **record updated locally** | **result** |
+| Y | Y | increase in local completion |
+| Y | N | no change in local, recorded still as transferred |
+| N | Y | no change in local, recorded still as transferred |
+| N | N | no change in personal, recorded still as transferred |
+
+**If a state transfers a lot of patients, would its completion rate look higher or lower than a state that transfers very few?**
+
+For a state with many transfer patients, the completion rate (%) would look higher when the majority of patients that transferred have not completed treatment, and lower when the majority of patients that transferred actually completed treatment.
+
+```{r}
+#####FOR QUESTION 2
+# only install these packages if you don't already have them!
+install.packages("tidyverse")
+install.packages("janitor")
+install.packages("sf")
+install.packages("remotes") # used to install packages from github
+remotes::install_github("UrbanInstitute/urbnmapr") # use this to install urbnmapr
+install.packages("naniar")
+install.packages("ggiraph")
+```
+
+```{r, message=FALSE, warning=FALSE}
+#loading packages
+library(tidyverse)
+library(janitor) 
+library(sf) # "simple features" for spatial data
+library(urbnmapr) # access to US state/country shapefiles for mapping
+library(naniar) # tools for exploring and visualizing missing data
+library(ggiraph) # makes ggplot charts interactive
+options(scipen = 99) # turns off scientific notation
+```
 
 ## Question 2: Mapping no use at discharge
 
@@ -130,6 +174,107 @@ Make **one [*interactive*]{.underline} map** with `ggiraph` showing, for each st
 In other words: among the episodes where `reason` is "Treatment completed," what share had `freq1_d` equal to "no use"?
 
 Work through this in bite-sized steps, like we did in Part 2. You will need to filter, group, summarize, build an index, join, and plot. Write one step at a time and look at the result before moving on.
+
+```{r}
+#| label: q2
+
+# selecting data
+my_teds_d <- teds_d %>%
+  clean_names() %>% # janitor
+  select(stfips, freq1_d, reason) # only focusing on these this week
+
+head(my_teds_d)
+```
+
+```{r}
+#missing-data-w-naniar
+miss_var_summary(my_teds_d)
+
+gg_miss_var(my_teds_d)
+
+my_teds_d %>%
+  slice_sample(n = 500) %>% # from dplyr
+  vis_miss() # from naniar
+
+
+teds_d %>% 
+  tabyl(freq1_d) # from janitor package
+#NO MISSING DATA; CAN MOVE ON
+```
+
+```{r}
+#filtering by treatment completed
+filtered_my_teds_d <- my_teds_d %>%
+  dplyr::filter(
+    reason == "Treatment completed"#,
+    #culmen_length_mm >= 39,
+    #island %in% c("Dream", "Torgersen")
+  )
+filtered_my_teds_d
+```
+
+```{r}
+#| label: percentage per state
+#grouping the treatment completed cleaned dataset by state
+
+percent_completed_by_state <- filtered_my_teds_d |> #takes teds dataset, each row is a specific record (left for a various reason)
+  group_by(stfips) |> # group by stfips code
+  summarize(total_cases = n(), # count rows
+            no_use_cases = sum(freq1_d == "no use", na.rm = TRUE)) |>  # na.rm removes na values if they exist
+  mutate(percentage_completed = (no_use_cases / total_cases) * 100)
+
+summary(percent_completed_by_state)
+percent_completed_by_state
+
+##### AMBER LOOK HERE
+#### output displays that for stfips #4, its no_use_cases has 0 value
+```
+
+```{r}
+#| label: checking individual state for count "no use"
+
+###counting total 'stfips == 4' entries
+testStfips4 <- filtered_my_teds_d %>%
+  #  filter(stfips == 4) %>%  # Checks for specific variable in Column 1
+  dplyr::count(stfips == 4)                      # Counts a different variable in Column 2
+print(testStfips4)
+
+###counting "no use" entries of 'stfips == 4'
+testStfips4 <- filtered_my_teds_d %>%
+  filter(stfips == 4) %>%  # Checks for specific variable in Column 1
+  count("no use")                      # Counts a different variable in Column 2
+print(testStfips4)
+```
+
+```{r}
+#checking values from above since some completed cases are 0
+# 2. Filter for a specific variable in Column 1, then count the values in Column 2
+testStfips4 <- filtered_my_teds_d %>%
+  filter(stfips == 4) %>%  # Checks for specific variable in Column 1
+  count("no use")                      # Counts a different variable in Column 2
+print(testStfips4)
+
+#####OR
+
+# Count matching rows without altering or filtering the data frame
+testStfips4_2 <- filtered_my_teds_d %>%
+  summarize(
+    matching_count = sum(stfips == 4 & status == "no use")
+  )
+print(testStfips4_2)
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
 
 ### The denominator decision
 
@@ -154,7 +299,7 @@ Pick one. **Below your map, write one sentence saying which denominator you used
 > **Full credit:** one interactive map meeting the four requirements above, plus your denominator sentence. It does not have to be beautiful, only correct and readable.
 
 ```{r}
-#| label: q2
+#| label: q2.1
 
 ```
 
