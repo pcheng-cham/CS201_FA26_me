@@ -144,6 +144,14 @@ ggplot(teds_d, aes(y = fct_infreq(services_d))) + #changed y to servies instead 
 
 For a state with many transfer patients, the completion rate (%) would look higher when the majority of patients that transferred have not completed treatment, and lower when the majority of patients that transferred actually completed treatment.
 
+## Question 2: Mapping no use at discharge
+
+Make **one [*interactive*]{.underline} map** with `ggiraph` showing, for each state, the percentage of [completed treatment]{.underline} episodes that ended with [no use at discharge]{.underline}.
+
+In other words: among the episodes where `reason` is "Treatment completed," what share had `freq1_d` equal to "no use"?
+
+Work through this in bite-sized steps, like we did in Part 2. You will need to filter, group, summarize, build an index, join, and plot. Write one step at a time and look at the result before moving on.
+
 ```{r}
 #####FOR QUESTION 2
 # only install these packages if you don't already have them!
@@ -167,16 +175,8 @@ library(ggiraph) # makes ggplot charts interactive
 options(scipen = 99) # turns off scientific notation
 ```
 
-## Question 2: Mapping no use at discharge
-
-Make **one [*interactive*]{.underline} map** with `ggiraph` showing, for each state, the percentage of [completed treatment]{.underline} episodes that ended with [no use at discharge]{.underline}.
-
-In other words: among the episodes where `reason` is "Treatment completed," what share had `freq1_d` equal to "no use"?
-
-Work through this in bite-sized steps, like we did in Part 2. You will need to filter, group, summarize, build an index, join, and plot. Write one step at a time and look at the result before moving on.
-
 ```{r}
-#| label: q2
+#| label: q2 start
 
 # selecting data
 my_teds_d <- teds_d %>%
@@ -196,21 +196,30 @@ my_teds_d %>%
   slice_sample(n = 500) %>% # from dplyr
   vis_miss() # from naniar
 
-
 teds_d %>% 
-  tabyl(freq1_d) # from janitor package
+  tabyl(freq1_d) %>% # from janitor package
 #NO MISSING DATA; CAN MOVE ON
+  adorn_totals("row") # shows total of variables being checked
 ```
 
 ```{r}
-#filtering by treatment completed
+#filtering by treatment completed AND removing entries which have "unknown" listed under the freq1_d column
 filtered_my_teds_d <- my_teds_d %>%
   dplyr::filter(
-    reason == "Treatment completed"#,
+    reason == "Treatment completed",#, # keeping "Treatment completed" entries from reason column
+    freq1_d != "unknown" # keep non-'unknown' entries from freq1_d column
     #culmen_length_mm >= 39,
     #island %in% c("Dream", "Torgersen")
   )
 filtered_my_teds_d
+
+#####CHECKING FOR ANY REMAINING "UNKNOWN" ENTIRES THAT SHOULD BE REMOVED
+sum(filtered_my_teds_d$freq1_d == "unknown", na.rm = TRUE)
+###METHOD TO VISUAL CHECK
+filtered_my_teds_d %>% 
+  tabyl(freq1_d) %>% # from janitor package
+  #NO MISSING DATA; CAN MOVE ON
+  adorn_totals("row") # shows total of variables being checked
 ```
 
 ```{r}
@@ -219,7 +228,7 @@ filtered_my_teds_d
 
 percent_completed_by_state <- filtered_my_teds_d |> #takes teds dataset, each row is a specific record (left for a various reason)
   group_by(stfips) |> # group by stfips code
-  summarize(total_cases = n(), # count rows
+  summarize(total_cases = n(), # n() is to count rows/TOTAL ROWS
             no_use_cases = sum(freq1_d == "no use", na.rm = TRUE)) |>  # na.rm removes na values if they exist
   mutate(percentage_completed = (no_use_cases / total_cases) * 100)
 
@@ -231,7 +240,7 @@ percent_completed_by_state
 ```
 
 ```{r}
-#| label: checking individual state for count "no use"
+#| label: DOESN'T WORK; checking individual state for count "no use"
 
 ###counting total 'stfips == 4' entries
 testStfips4 <- filtered_my_teds_d %>%
@@ -244,37 +253,137 @@ testStfips4 <- filtered_my_teds_d %>%
   filter(stfips == 4) %>%  # Checks for specific variable in Column 1
   count("no use")                      # Counts a different variable in Column 2
 print(testStfips4)
+
+######DOESN'T WORK; IM RETARDED
+######can't put conditional check in count();
+######NO IDEA WHAT THE ABOVE CODE IS EVEN CHECLKING FOR
 ```
 
 ```{r}
-#checking values from above since some completed cases are 0
-# 2. Filter for a specific variable in Column 1, then count the values in Column 2
-testStfips4 <- filtered_my_teds_d %>%
-  filter(stfips == 4) %>%  # Checks for specific variable in Column 1
-  count("no use")                      # Counts a different variable in Column 2
-print(testStfips4)
+#| label: WORKS; checking individual state for count "no use"
 
-#####OR
+# checking values from above since some completed cases are 0
 
-# Count matching rows without altering or filtering the data frame
+# multi-conditional search using summarize, NO FILTER()
 testStfips4_2 <- filtered_my_teds_d %>%
   summarize(
-    matching_count = sum(stfips == 4 & status == "no use")
+    matching_count = sum(stfips == 4 & freq1_d == "no use")  #changed "status" to "freq1_d"
   )
-print(testStfips4_2)
+#print(testStfips4_2) # PRINTS IN CONSOLE
+testStfips4_2
+
+# sequential searches using filter first
+testStfips4_2 <- filtered_my_teds_d %>%
+  filter(stfips == 4)
+sum(testStfips4_2$freq1_d == "no use", na.rm = TRUE)
+
+# nested sequential searches using filter + summarise
+testStfips4_2 <-filtered_my_teds_d %>%
+  filter(stfips == 4) %>%
+  summarise(count = sum(freq1_d == "no use", na.rm = TRUE))
+testStfips4_2
+
+#####WORKS NOW, count is correct; stfips 4 does not have any explicitly defined cases with "no use"
+```
+
+```{r}
+#| label: check-percentages
+
+#check math of any%; average of average between states
+mean(percent_completed_by_state$percentage_completed)
+
+#### fraction of completed over total
+sum(percent_completed_by_state$no_use_cases) /
+  sum(percent_completed_by_state$total_cases) * 100
+
+summary(percent_completed_by_state$percentage_completed)
+
+sum(percent_completed_by_state$total_cases) == nrow(filtered_my_teds_d)
+
+```
+
+#####GETTING MAP DATA
+
+```{r}
+#| message: false
+#| warning: false
+#####GETTING MAP DATA
+
+states_map <- get_urbn_map(map = "states", sf = TRUE)
+
+head(states_map, 10)
 ```
 
 ```{r}
 
+#####preparing index
+# copies stfips data to create new column in percent_completed_by_state called 
+# state_fips, forcing values to be two digits (start with zero)
+
+percent_completed_by_state <- percent_completed_by_state |> # take index from percent_completed_by_state
+  mutate(state_fips = sprintf("%02d", stfips)) # sprintf = string print formatted
+#%02d sets to 2 digits
+
+head(percent_completed_by_state)
+
+#converted to TEXT VALUES, or the 0 in front would be dropped
+
 ```
 
 ```{r}
-
+#| message: false
+#| warning: false
+#| 
+#####stitching for index
+mapping_data <- full_join(percent_completed_by_state,
+                          states_map,
+                          by = "state_fips") # remember the index we prepared above?
 ```
 
 ```{r}
+##### comparing row counts
 
+nrow(percent_completed_by_state)
+nrow(states_map)
+nrow(mapping_data)
 ```
+
+#####PLOTTING MAP
+
+```{r}
+##### interactive map + cleaned hover tooltip
+
+completed_treatment_map_interactive <- ggplot(mapping_data) +
+  geom_sf_interactive(mapping = aes(geometry = geometry,
+                                    fill = percentage_completed,
+                                    tooltip = paste(
+                                      "State:", state_abbv,
+                                      "<br>State FIPS:", stfips, 
+                                      "<br>Completed:", round(percentage_completed, 2), "%")),
+                      color = "#ffffff",
+                      linewidth = 0.25) + # changes border smaller for easier visibility
+  labs(fill = "% of Completed Treatment Episodes ending with verified no use at discharge",
+       title = "Completed Treatment Episodes with no use at discharge by State",
+       subtitle = "TEDS-D 2024 (SAMHSA)") +
+  scale_fill_viridis_c(option = "mako", direction = -1) + #direction flips direction of colors; changes higher = more saturation
+    #####fill data is a continuous sequence of numbers (like temperature, heights, or counts), replace scale_fill_viridis_d() with the continuous version, scale_fill_viridis_c()
+  coord_sf(datum = NA) + # turns off lat/long grid
+  theme_minimal() +
+  theme(panel.background = element_blank(),
+        axis.ticks = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank(),
+    legend.text = element_text(size = 4),
+    legend.title = element_text(size = 5),
+    strip.text = element_text(size = 4))
+
+
+# Use `girafe` to render the interactive plot
+girafe(ggobj = completed_treatment_map_interactive)
+```
+
+DENOMINATOR I USED: I chose to not include the "unknown" values of freq1_d as that is what is considered as the best practice to follow when dealing with the subject matter of standard public health reporting and data analytics.\
+Including uncertain (in this case, unknown) data in the total count would artificially deflate the calculated percentage, which would be a misrepresentation of the accurately recorded data.
 
 ### The denominator decision
 
@@ -320,8 +429,323 @@ Investigate how **completion rates** differ across **service type** (`services_d
 > **Full credit:** two labeled visualizations that actually show the comparison you say they show, plus a summary that describes a real pattern in your own output. You are not graded on finding the "right" pattern. You are graded on whether your summary matches your charts.
 
 ```{r}
-#| label: q3
+#| label: q3.1
+#####completion rates vs service type (services_d)
+#bar
 
+# selecting data
+my_teds_d_services_d <- teds_d %>%
+  clean_names() %>% # janitor
+  select(services_d, reason)
+
+head(my_teds_d_services_d)
+```
+
+```{r}
+#missing-data-w-naniar
+miss_var_summary(my_teds_d_services_d)
+
+gg_miss_var(my_teds_d_services_d)
+
+my_teds_d_services_d %>%
+  slice_sample(n = 500) %>% # from dplyr
+  vis_miss() # from naniar
+
+teds_d %>% 
+  tabyl(services_d) %>% # from janitor package
+  #NO MISSING DATA; CAN MOVE ON
+  adorn_totals("row") # shows total of variables being checked
+```
+
+```{r}
+#filtering by treatment completed
+filtered_my_teds_d_services_d <- my_teds_d_services_d %>%
+  dplyr::filter(
+    reason == "Treatment completed",#, # keeping "Treatment completed" entries from reason column
+    #culmen_length_mm >= 39,
+    #island %in% c("Dream", "Torgersen")
+  )
+##############checking to ensure all entries are "Treatment completed"
+#####IGNORE THIS:CHECKING FOR ANY REMAINING "UNKNOWN" ENTIRES THAT SHOULD BE REMOVED; NEED TO MODIFY IF USED
+#sum(filtered_my_teds_d_services_d$freq1_d == "unknown", na.rm = TRUE)
+###METHOD TO VISUAL CHECK
+filtered_my_teds_d_services_d %>% 
+  tabyl(reason) %>% # from janitor package
+  #NO MISSING DATA; CAN MOVE ON
+  adorn_totals("row") # shows total of variables being checked
+
+filtered_my_teds_d_services_d
+
+#sum() will print out result in console
+sum(filtered_my_teds_d_services_d$reason == "Treatment completed", na.rm = TRUE)
+#####CHECK "WORKS; checking individual state for count "no use"" for other methods of checking
+```
+
+```{r}
+### Using tabyl(), show the breakdown of services_d (services_d for discharge). Which services_d is most common, and what percentage of all discharges does it account for?
+class(filtered_my_teds_d_services_d$services_d)
+#look at this variable; check class
+summary(filtered_my_teds_d_services_d$services_d)
+#summary of data frame
+
+filtered_my_teds_d_services_d <- filtered_my_teds_d_services_d %>%
+  mutate(services_d = recode(as.character(services_d),
+                             "1" = "Detox, 24-hour, hospital inpatient",
+                             "2" = "Detox, 24-hour, free-standing residential",
+                             "3" = "Rehab/residential, hospital (non-detox)",
+                             "4" = "Rehab/residential, short term (30 days or fewer)",
+                             "5" = "Rehab/residential, long term (more than 30 days)",
+                             "6" = "Ambulatory, intensive outpatient",
+                             "7" = "Ambulatory, non-intensive outpatient",
+                             "8" = "Ambulatory, detoxification",
+                             .missing = "unknown"),
+         services_d = factor(services_d))
+# "Turn the codes into text, swap each code for its label (and call missing ones 'unknown'),
+# then treat the result as a category (factor)."
+
+# organizes relevant info
+filtered_my_teds_d_services_d %>% 
+  tabyl(services_d) %>%
+  arrange(desc(n)) %>%  # arranges in descending order
+  adorn_pct_formatting(digit = 2) # rounds to 2 decimal digits
+```
+
+```{r}
+##loads packages if not done so already
+library(tidyverse)
+library(janitor) 
+library(naniar) # tools for exploring and visualizing missing data
+library(plotly) # makes finished ggplot charts interactive
+```
+
+```{r}
+###MY VERSION BAR CHART
+plot_filtered_my_teds_d_services_d <- ggplot(data = filtered_my_teds_d_services_d, aes(x = fct_infreq(services_d))) + #fct_infreq(variable) sorts by largest to smallest  
+    ######REORDER DOESN'T WORK; ASK WHY
+  geom_bar() +
+  coord_flip() + # flips cooordinates; can use y = within aes() instead too
+  labs(title = "Completed Treatment Discharges by Type of Service, 2024 TEDS-D",
+       x = "Number of discharges",
+       y = "Type of treatment service") +
+  theme(plot.title = element_text(hjust = 0.5)) + #doesn't shift title to center??
+  theme_minimal()
+ggplotly(plot_filtered_my_teds_d_services_d)
+```
+
+```{r}
+
+```
+
+```{r}
+#| label: q3.2
+#####completion rates vs length of stay (los)
+#histogram
+
+#####completion rates vs service type (services_d)
+#bar
+
+# selecting data
+my_teds_d_los <- teds_d %>%
+  clean_names() %>% # janitor
+  select(stfips, los, reason)
+
+head(my_teds_d_los)
+```
+
+```{r}
+#missing-data-w-naniar
+miss_var_summary(my_teds_d_los)
+
+gg_miss_var(my_teds_d_los)
+
+my_teds_d_los %>%
+  slice_sample(n = 500) %>% # from dplyr
+  vis_miss() # from naniar
+
+teds_d %>% 
+  tabyl(los) %>% # from janitor package
+  #NO MISSING DATA; CAN MOVE ON
+  adorn_totals("row") # shows total of variables being checked
+```
+
+```{r}
+#filtering by treatment completed
+filtered_my_teds_d_los <- my_teds_d_los %>%
+  dplyr::filter(
+    reason == "Treatment completed",#, # keeping "Treatment completed" entries from reason column
+    #culmen_length_mm >= 39,
+    #island %in% c("Dream", "Torgersen")
+  )
+##############checking to ensure all entries are "Treatment completed"
+#####IGNORE THIS:CHECKING FOR ANY REMAINING "UNKNOWN" ENTIRES THAT SHOULD BE REMOVED; NEED TO MODIFY IF USED
+#sum(filtered_my_teds_d_services_d$freq1_d == "unknown", na.rm = TRUE)
+###METHOD TO VISUAL CHECK
+filtered_my_teds_d_los %>% 
+  tabyl(reason) %>% # from janitor package
+  #NO MISSING DATA; CAN MOVE ON
+  adorn_totals("row") # shows total of variables being checked
+
+filtered_my_teds_d_los
+
+#sum() will print out result in console
+sum(filtered_my_teds_d_los$reason == "Treatment completed", na.rm = TRUE)
+#####CHECK "WORKS; checking individual state for count "no use"" for other methods of checking
+```
+
+```{r}
+### Using tabyl(), show the breakdown of services_d (services_d for discharge). Which services_d is most common, and what percentage of all discharges does it account for?
+class(filtered_my_teds_d_los$los)
+#look at this variable; check class
+summary(filtered_my_teds_d_los$los)
+#summary of data frame
+
+filtered_my_teds_d_los2 <- filtered_my_teds_d_los %>%
+  mutate(value_los = los,
+         value_los = recode(as.character(value_los),
+                            "1" = "1" ,
+                            "2" = "2" ,
+                            "3" = "3" ,
+                            "4" = "4" ,
+                            "5" = "5" ,
+                            "6" = "6" ,
+                            "7" = "7" ,
+                            "8" = "8" ,
+                            "9" = "9" ,
+                            "10" = "10",
+                            "11" = "11",
+                            "12" = "12",
+                            "13" = "13",
+                            "14" = "14",
+                            "15" = "15",
+                            "16" = "16",
+                            "17" = "17",
+                            "18" = "18",
+                            "19" = "19",
+                            "20" = "20",
+                            "21" = "21",
+                            "22" = "22",
+                            "23" = "23",
+                            "24" = "24",
+                            "25" = "25",
+                            "26" = "26",
+                            "27" = "27",
+                            "28" = "28",
+                            "29" = "29",
+                            "30" = "30",
+                            "31" = "45",
+                            "32" = "60",
+                            "33" = "90",
+                            "34" = "120",
+                            "35" = "180",
+                            "36" = "365",
+                            "37" = "366",
+                            .missing = "unknown"),
+         value_los = factor(value_los),
+         label_los = los,
+         label_los = recode(as.character(label_los),
+                            "1" = "1" ,
+                            "2" = "2" ,
+                            "3" = "3" ,
+                            "4" = "4" ,
+                            "5" = "5" ,
+                            "6" = "6" ,
+                            "7" = "7" ,
+                            "8" = "8" ,
+                            "9" = "9" ,
+                            "10" = "10",
+                            "11" = "11",
+                            "12" = "12",
+                            "13" = "13",
+                            "14" = "14",
+                            "15" = "15",
+                            "16" = "16",
+                            "17" = "17",
+                            "18" = "18",
+                            "19" = "19",
+                            "20" = "20",
+                            "21" = "21",
+                            "22" = "22",
+                            "23" = "23",
+                            "24" = "24",
+                            "25" = "25",
+                            "26" = "26",
+                            "27" = "27",
+                            "28" = "28",
+                            "29" = "29",
+                            "30" = "30",
+                            "31" = "31 ~ 45",
+                            "32" = "46 ~ 60",
+                            "33" = "61 ~ 90",
+                            "34" = "91 ~ 120",
+                            "35" = "121 ~ 180",
+                            "36" = "181 ~ 365",
+                            "37" = "365+",
+                            .missing = "unknown"),
+         label_los = factor(label_los),
+         los = sprintf("%03d", los))
+# "Turn the codes into text, swap each code for its label (and call missing ones 'unknown'),
+# then treat the result as a category (factor)."
+
+# organizes relevant info
+filtered_my_teds_d_los2 %>% 
+  tabyl(los) %>%
+  arrange((los))# %>%  # arranges in ascending order
+#  #adorn_pct_formatting(digit = 2) # rounds to 2 decimal digits
+```
+
+```{r}
+##loads packages if not done so already
+library(tidyverse)
+library(janitor) 
+library(naniar) # tools for exploring and visualizing missing data
+library(plotly) # makes finished ggplot charts interactive
+```
+
+```{r}
+###MY VERSION BAR CHART
+plot_filtered_my_teds_d_services_d <- ggplot(data = filtered_my_teds_d_services_d, aes(x = fct_infreq(services_d))) + #fct_infreq(variable) sorts by largest to smallest  
+  ######REORDER DOESN'T WORK; ASK WHY
+  geom_bar() +
+  coord_flip() + # flips cooordinates; can use y = within aes() instead too
+  labs(title = "Completed Treatment Discharges by Type of Service, 2024 TEDS-D",
+       x = "Number of discharges",
+       y = "Type of treatment service") +
+  theme(plot.title = element_text(hjust = 0.5)) + #doesn't shift title to center??
+  theme_minimal()
+ggplotly(plot_filtered_my_teds_d_services_d)
+```
+
+```{r}
+library(ggplot2)
+
+# Plot using density
+ggplot(filtered_my_teds_d_los2, aes(x = los)) +
+  geom_histogram(aes(y = after_stat(density)), 
+                 breaks = c(0, 1, 2, 3, 4, 5, 10), 
+                 fill = "steelblue", 
+                 color = "white") +
+  labs(title = "Duration Histogram",
+       x = "Years",
+       y = "Density") +
+  theme_minimal()
+```
+
+```{r}
+library(ggplot2)
+
+# Create a data frame
+df <- data.frame(durations = c(1, 1.5, 2, 3, 4, 5, 6, 7, 8, 9, 10), density = c(1,2,3,4,5,6,7,8,9,10,11))
+
+# Plot using density
+ggplot(df, aes(x = durations)) +
+  geom_histogram(aes(y = after_stat(density)), 
+                 breaks = c(0, 1, 2, 3, 4, 5, 10), 
+                 fill = "steelblue", 
+                 color = "white") +
+  labs(title = "Duration Histogram",
+       x = "Years",
+       y = "Density") +
+  theme_minimal()
 ```
 
 **Summary:**
