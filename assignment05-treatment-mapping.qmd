@@ -358,7 +358,7 @@ nrow(mapping_data)
 #####PLOTTING MAP
 
 ```{r}
-#| label: q2 ANSWER
+#| label: q2.1 ANSWER
 ##### interactive map + cleaned hover tooltip
 
 completed_treatment_map_interactive <- ggplot(mapping_data) +
@@ -392,6 +392,10 @@ completed_treatment_map_interactive <- ggplot(mapping_data) +
 girafe(ggobj = completed_treatment_map_interactive)
 ```
 
+```{r}
+#| label: q2.2 ANSWER
+```
+
 DENOMINATOR I USED: I chose to not include the "unknown" values of freq1_d as that is what is considered as the best practice to follow when dealing with the subject matter of standard public health reporting and data analytics.\
 Including uncertain (in this case, unknown) data in the total count would artificially deflate the calculated percentage, which would be a misrepresentation of the accurately recorded data.
 
@@ -416,11 +420,6 @@ Pick one. **Below your map, write one sentence saying which denominator you used
 - handle states with no data honestly (remember Friday in class)
 
 > **Full credit:** one interactive map meeting the four requirements above, plus your denominator sentence. It does not have to be beautiful, only correct and readable.
-
-```{r}
-#| label: q2.1
-
-```
 
 **Denominator I used, and why:**
 
@@ -618,7 +617,9 @@ print(percent_completed_by_services_d_2$percentage_completed_2)
 ```
 
 ```{r}
-#| label: q3.1 ANSWER
+
+#####WRONG q3.1 ANSWER
+
 ###MY VERSION BAR CHART
 plot_filtered_my_teds_d_services_d_2 <- ggplot(data = percent_completed_by_services_d_2,
   aes(x = reorder(services_d, percentage_completed_2),
@@ -1024,13 +1025,136 @@ Make one visualization that shows service type and length of stay **together**â€
 
 Then, in a sentence, say what this combined view shows that your two separate charts in Question 3 could not.
 
-```{r}
+```{r, eval=FALSE}
 #| label: extra-credit
+#| 
+```
 
-ggplot(data = penguins_data, aes(x = los, y = body_mass_g, color = species, shape = island)) +
+```{r}
+# 1. Start from teds_d. Do not filter by reason.
+my_teds_d_los3 <- teds_d %>%
+  clean_names() %>% # janitor
+  select(services_d, los, reason)
+
+head(my_teds_d_los3)
+```
+
+```{r}
+#missing-data-w-naniar
+miss_var_summary(my_teds_d_los3)
+
+gg_miss_var(my_teds_d_los3)
+
+my_teds_d_los %>%
+  slice_sample(n = 500) %>% # from dplyr
+  vis_miss() # from naniar
+
+teds_d %>% 
+  tabyl(los) %>% # from janitor package
+  #NO MISSING DATA; CAN MOVE ON
+  adorn_totals("row") # shows total of variables being checked
+```
+
+```{r}
+### Using tabyl(), show the breakdown of reason (reason for discharge). Which reason is most common, and what percentage of all discharges does it account for?
+class(my_teds_d_los3$reason)
+#look at this variable; check class
+summary(my_teds_d_los3$reason)
+#summary of data frame
+
+my_teds_d_los3 <- my_teds_d_los3 %>%
+  mutate(reason = recode(as.character(reason),
+                         "1" = "Treatment completed",
+                         "2" = "Dropped out of treatment",
+                         "3" = "Terminated by facility",
+                         "4" = "Transferred to another treatment program or facility",
+                         "5" = "Incarcerated",
+                         "6" = "Death",
+                         "7" = "Other",
+                         .missing = "unknown"),
+         reason = factor(reason))
+# ////////////////////////////////////////////////////////////////////////////
+# "Turn the codes into text, swap each code for its label (and call missing ones 'unknown'),
+# then treat the result as a category (factor)."
+
+#######checkin data
+my_teds_d_los3 %>% 
+  tabyl(reason) %>%
+  arrange(desc(n)) %>%  # arranges in descending order
+  adorn_pct_formatting(digit = 2) # rounds to 2 decimal digits
+```
+
+```{r}
+# make a grouped version of los with case_when() inside mutate().
+my_teds_d_los3 <- my_teds_d_los3 %>%
+  mutate(
+    binned_los3 = case_when(
+      los >= 1 & los <= 7 ~ "1 ~ 7 days",
+      los >= 8 & los <= 14 ~ "8 ~ 14 days",
+      los >= 15 & los <= 30 ~ "15 ~ 30 days",
+      los == 31 ~ "31 to 45 days",
+      los == 32 ~ "46 to 60 days",
+      los == 33 ~ "61 to 90 days",
+      los == 34 ~ "91 to 120 days",
+      los == 35 ~ "121 to 180 days",
+      los == 36 ~ "181 to 365 days",
+      los == 37 ~ "Over 365 days"
+    )
+  )
+
+####CHECKING DATA AGAIN
+my_teds_d_los3 %>% 
+  tabyl(los) %>%
+  arrange(desc(n)) %>%  # arranges in descending order
+  adorn_totals("row") %>% # shows total of variables being checked
+  adorn_pct_formatting(digit = 2) # rounds to 2 decimal digits
+```
+
+```{r}
+# 2. Use group_by(services_d) instead of group_by(stfips).
+# 3. In summarize(), count all rows with n() and completed rows with sum(reason == "Treatment completed").
+# 4. Use mutate() to calculate the percentage, the same as in Q2.
+
+percent_by_binned_los3 <- my_teds_d_los3 |>
+  group_by(binned_los3, services_d) |> # group by binned los
+  summarize(total_cases_los3 = n(), # n() is to count rows/TOTAL ROWS
+            treatment_completed_cases_los3 = sum(reason == "Treatment completed", na.rm = TRUE)) |>  # na.rm removes na values if they exist
+  mutate(percentage_completed_los3 = (treatment_completed_cases_los3 / total_cases_los3) * 100)
+
+
+#########MISSING services_d IN TABLE; MAY NEED TO ASK AMBER SINCE NOT SURE HOW TO IMPLEMENT IT HERE
+summary(percent_by_binned_los3)
+percent_by_binned_los3
+```
+
+```{r}
+plot_percent_by_binned_los3 <- ggplot(data = percent_by_binned_los3,
+                                     aes(x = binned_los3,
+                                         y = percentage_completed_los3,
+                                         text = paste(
+                                           "Length of Stay (LoS):", binned_los3,
+                                           "<br>Percentage completed:", round(percentage_completed_los3, 2), "%"))) +
+  geom_col() +
+  coord_flip() + # flips cooordinates; can use y = within aes() instead too
+  labs(title = "Percent of Completed Treatment Discharges by Length of Stay, 2024 TEDS-D",
+       y = "% of discharges",
+       x = "Length of Stay (LoS)") +
+  theme(plot.title = element_text(hjust = 0.5)) + #doesn't shift title to center??
+  theme_minimal() + 
+  facet_wrap(~services_d)
+ggplotly(plot_percent_by_binned_los3, tooltip = "text")
+```
+
+```{r, eval=FALSE}
+# ref for myeslf; simple way to use facet_wrap
+ggplot(data = penguins_data, aes(x = flipper_length_mm, y = body_mass_g, color = species, shape = island)) +
   geom_point() +
   theme(legend.position = "none") +
   facet_wrap(~sex)
+
+##### psudeocode
+teds_d <- readRDS("data/teds_d_clean.rds")
+head(teds_d)
 
 ```
 
