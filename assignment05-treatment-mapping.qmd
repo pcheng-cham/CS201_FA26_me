@@ -1159,7 +1159,7 @@ head(teds_d)
 
 ```
 
-**What the combined view adds:**
+**What the combined view adds:** The combined view gives a better perspective and an easier way to compare the specific different services that lead to varying times of completed care, which the two separate charts from question 3 would not be able to properly convey.
 
 ------------------------------------------------------------------------
 
