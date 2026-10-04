@@ -1128,6 +1128,7 @@ percent_by_binned_los3
 ```
 
 ```{r}
+#| label: extra-credit ANSWER
 plot_percent_by_binned_los3 <- ggplot(data = percent_by_binned_los3,
                                      aes(x = binned_los3,
                                          y = percentage_completed_los3,
