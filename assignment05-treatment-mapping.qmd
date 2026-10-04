@@ -60,7 +60,7 @@ c)  In a sentence or two: what does the `reason` value "Transferred to another t
 > **Full credit:** a working `tabyl()`, a readable labeled bar chart, and a sentence or two showing you thought about part (c). There is no trick in this question!
 
 ```{r}
-#| label: q1.a
+#| label: q1.1
 
 ### Using tabyl(), show the breakdown of reason (reason for discharge). Which reason is most common, and what percentage of all discharges does it account for?
 class(teds_d$reason)
@@ -83,6 +83,7 @@ teds_d <- teds_d %>%
 # "Turn the codes into text, swap each code for its label (and call missing ones 'unknown'),
 # then treat the result as a category (factor)."
 
+#######checkin data
 teds_d %>% 
   tabyl(reason) %>%
   arrange(desc(n)) %>%  # arranges in descending order
@@ -90,7 +91,7 @@ teds_d %>%
 ```
 
 ```{r}
-#| label: q1.b
+#| label: q1.2 ANSWER
 #////////////////////////////////////////////////////////////////////////////
 ### Make one bar chart showing the number of discharges by services_d (type of treatment service). Give it an informative title and axis labels.
 
@@ -126,6 +127,10 @@ ggplot(teds_d, aes(y = fct_infreq(services_d))) + #changed y to servies instead 
 # if they stay in data set, doesn't change much
 ```
 
+```{r}
+#| label: q1.3 ANSWER
+```
+
 **Answer to (a): refer to label: q1.a**
 
 **Answer to (b):** (produce a bar chart in the code chunk above)
@@ -138,7 +143,7 @@ ggplot(teds_d, aes(y = fct_infreq(services_d))) + #changed y to servies instead 
 | Y | Y | increase in local completion |
 | Y | N | no change in local, recorded still as transferred |
 | N | Y | no change in local, recorded still as transferred |
-| N | N | no change in personal, recorded still as transferred |
+| N | N | no change in local, recorded still as transferred |
 
 **If a state transfers a lot of patients, would its completion rate look higher or lower than a state that transfers very few?**
 
@@ -239,7 +244,7 @@ percent_completed_by_state
 #### output displays that for stfips #4, its no_use_cases has 0 value
 ```
 
-```{r}
+```{r, eval=FALSE}
 #| label: DOESN'T WORK; checking individual state for count "no use"
 
 ###counting total 'stfips == 4' entries
@@ -351,6 +356,7 @@ nrow(mapping_data)
 #####PLOTTING MAP
 
 ```{r}
+#| label: q2 ANSWER
 ##### interactive map + cleaned hover tooltip
 
 completed_treatment_map_interactive <- ggplot(mapping_data) +
@@ -364,19 +370,21 @@ completed_treatment_map_interactive <- ggplot(mapping_data) +
                       linewidth = 0.25) + # changes border smaller for easier visibility
   labs(fill = "% of Completed Treatment Episodes ending with verified no use at discharge",
        title = "Completed Treatment Episodes with no use at discharge by State",
-       subtitle = "TEDS-D 2024 (SAMHSA)") +
-  scale_fill_viridis_c(option = "mako", direction = -1) + #direction flips direction of colors; changes higher = more saturation
+       subtitle = "TEDS-D 2024 (SAMHSA)",
+       caption = "RED FILL IS FOR N/A OR UNKNOWN VALUES") +
+  scale_fill_viridis_c(option = "mako", direction = -1, na.value = "red") + #direction flips direction of colors; changes higher = more saturation
     #####fill data is a continuous sequence of numbers (like temperature, heights, or counts), replace scale_fill_viridis_d() with the continuous version, scale_fill_viridis_c()
   coord_sf(datum = NA) + # turns off lat/long grid
   theme_minimal() +
   theme(panel.background = element_blank(),
         axis.ticks = element_blank(),
-    axis.text.x = element_blank(),
-    axis.text.y = element_blank(),
-    legend.text = element_text(size = 4),
-    legend.title = element_text(size = 5),
-    strip.text = element_text(size = 4))
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        legend.text = element_text(size = 4),
+        legend.title = element_text(size = 5),
+        strip.text = element_text(size = 4))
 
+#####RED COLOR DOESN'T SHOW UP ON LEGEND; ASK AMBER LATER
 
 # Use `girafe` to render the interactive plot
 girafe(ggobj = completed_treatment_map_interactive)
@@ -429,7 +437,7 @@ Investigate how **completion rates** differ across **service type** (`services_d
 > **Full credit:** two labeled visualizations that actually show the comparison you say they show, plus a summary that describes a real pattern in your own output. You are not graded on finding the "right" pattern. You are graded on whether your summary matches your charts.
 
 ```{r}
-#| label: q3.1
+#| label: q3.1 start
 #####completion rates vs service type (services_d)
 #bar
 
@@ -508,6 +516,9 @@ filtered_my_teds_d_services_d %>%
   tabyl(services_d) %>%
   arrange(desc(n)) %>%  # arranges in descending order
   adorn_pct_formatting(digit = 2) # rounds to 2 decimal digits
+
+#n_count <- sum(filtered_my_teds_d_services_d$reason == "Treatment completed", na.rm = TRUE)
+#n_count
 ```
 
 ```{r}
@@ -532,27 +543,178 @@ plot_filtered_my_teds_d_services_d <- ggplot(data = filtered_my_teds_d_services_
 ggplotly(plot_filtered_my_teds_d_services_d)
 ```
 
-```{r}
+#####COMPLETION RATE ATTEMPTS
 
+```{r, eval=FALSE}
+###########ABOVE CODE IS NOT COMPLETION RATE; only count
+
+#############DOESN'T WORK IN THE END#############
+
+#####calculating percent; graph should look the same though
+#####had to externally calculate total cases since = n() did not work; just returns total rows of the group_by entry
+total_cases_1 <- sum(filtered_my_teds_d_services_d$reason == "Treatment completed", na.rm = TRUE)
+
+percent_completed_by_services_d <- filtered_my_teds_d_services_d |> #takes teds dataset, each row is a specific record (left for a various reason)
+  group_by(services_d) |> # group by services d
+  summarize(#total_cases_1 = n(), # count rows
+    ####ABOVE DOESN't WORK FOR SOME REASON
+    completed_cases_1 = sum(reason == "Treatment completed", na.rm = TRUE)) |>  # na.rm removes na values if they exist
+  mutate(percentage_completed_1 = (completed_cases_1 / total_cases_1) * 100)
+
+summary(percent_completed_by_services_d)
+percent_completed_by_services_d
+
+print(percent_completed_by_services_d$total_cases_1)
+
+
+#####CHECKING PERCENTAGES
+#### fraction of completed over total
+###had to change percent_completed_by_services_d$total_cases_1 to just total_cases_1
+sum(percent_completed_by_services_d$completed_cases_1) /
+  sum(total_cases_1) * 100
+
+summary(percent_completed_by_services_d$percentage_completed_1)
+
+sum(total_cases_1) == nrow(filtered_my_teds_d_services_d)
+```
+
+```{r, eval=FALSE}
+
+#############DOESN'T WORK IN THE END#############
+
+###MY VERSION BAR CHART
+plot_percent_completed_by_services_d <- ggplot(data = percent_completed_by_services_d, aes(x = fct_infreq(services_d))) + #fct_infreq(variable) sorts by largest to smallest  
+  ######REORDER DOESN'T WORK; ASK WHY
+  geom_bar() +
+  coord_flip() + # flips cooordinates; can use y = within aes() instead too
+  labs(title = "Percentage of Completed Treatment Discharges by Type of Service, 2024 TEDS-D",
+       x = "% of total discharges",
+       y = "Type of treatment service") +
+  theme(plot.title = element_text(hjust = 0.5)) + #doesn't shift title to center??
+  theme_minimal()
+ggplotly(plot_percent_completed_by_services_d)
 ```
 
 ```{r}
-#| label: q3.2
-#####completion rates vs length of stay (los)
-#histogram
+############ATTEMPT 2 @ COMPLETION RATE
 
-#####completion rates vs service type (services_d)
-#bar
+# external calculation of total count of completed cases
+total_filtered_completion_count_2 <- sum(filtered_my_teds_d_services_d$reason == "Treatment completed", na.rm = TRUE)
+#total_filtered_completion_count
 
-# selecting data
-my_teds_d_los <- teds_d %>%
+percent_completed_by_services_d_2 <- filtered_my_teds_d_services_d |> #takes teds dataset, each row is a specific record (left for a various reason)
+  group_by(services_d) |> # group by services d
+  summarize(#total_cases_1 = n(), # count rows
+    ####ABOVE DOESN't WORK FOR SOME REASON
+    #completed_cases_1 = sum(reason == "Treatment completed", na.rm = TRUE)) |>  # na.rm removes na values if they exist
+    percentage_completed_2 = n() / total_filtered_completion_count_2 * 100)
+
+summary(percent_completed_by_services_d_2)
+percent_completed_by_services_d_2
+
+print(percent_completed_by_services_d_2$percentage_completed_2)
+```
+
+```{r}
+#| label: q3.1 ANSWER
+###MY VERSION BAR CHART
+plot_filtered_my_teds_d_services_d_2 <- ggplot(data = percent_completed_by_services_d_2,
+  aes(x = reorder(services_d, percentage_completed_2),
+      y = percentage_completed_2,
+      text = paste(
+        "Treatment Service type:", reorder(services_d, percentage_completed_2),
+        "<br>Percentage completed:", round(percentage_completed_2, 2), "%"))) +
+  geom_col() +
+  #coord_cartesian(c(0, 100)) +
+  coord_flip() + # flips cooordinates; can use y = within aes() instead too
+  labs(title = "Total Percent of Completed Treatment Discharges by Type of Service, 2024 TEDS-D",
+       y = "% of discharges",
+       x = "Type of treatment service") +
+  theme(plot.title = element_text(hjust = 0.5)) + #doesn't shift title to center??
+  theme_minimal()
+ggplotly(plot_filtered_my_teds_d_services_d_2, tooltip = "text")
+
+###ASK AMBER AS TO WHY tooltip in aes did not work; had to call it again when running ggplotly
+```
+
+```{r}
+####### q3.1 FRESH ATTEMPT
+
+# 1. Start from teds_d. Do not filter by reason.
+my_teds_d_services_d_fresh <- teds_d %>%
   clean_names() %>% # janitor
-  select(stfips, los, reason)
+  select(services_d, reason)
 
 head(my_teds_d_los)
 ```
 
 ```{r}
+#missing-data-w-naniar
+miss_var_summary(my_teds_d_services_d_fresh)
+
+gg_miss_var(my_teds_d_services_d_fresh)
+
+my_teds_d_services_d_fresh %>%
+  slice_sample(n = 500) %>% # from dplyr
+  vis_miss() # from naniar
+
+my_teds_d_services_d_fresh %>% 
+  tabyl(services_d) %>%
+  arrange(desc(n)) %>%  # arranges in descending order
+  adorn_totals("row") %>% # shows total of variables being checked
+  adorn_pct_formatting(digit = 2) # rounds to 2 decimal digits
+```
+
+```{r}
+# 2. Use group_by(services_d) instead of group_by(stfips).
+# 3. In summarize(), count all rows with n() and completed rows with sum(reason == "Treatment completed").
+# 4. Use mutate() to calculate the percentage, the same as in Q2.
+
+percent_of_completion_by_services_d <- my_teds_d_services_d_fresh |>
+  group_by(services_d) |> # group by services_d
+  summarize(total_cases_services_d = n(), # n() is to count rows/TOTAL ROWS
+            treatment_completed_cases_services_d = sum(reason == "Treatment completed", na.rm = TRUE)) |>  # na.rm removes na values if they exist
+  mutate(percentage_completed_services_d = (treatment_completed_cases_services_d / total_cases_services_d) * 100)
+
+summary(percent_of_completion_by_services_d)
+percent_of_completion_by_services_d
+```
+
+```{r}
+#| label: q3.1 ANSWER
+
+plot_percent_of_completion_by_services_d <- ggplot(data = percent_of_completion_by_services_d,
+  aes(x = services_d,
+      y = percentage_completed_services_d,
+      text = paste(
+        "Type of treatment service/setting at discharge:", services_d,
+        "<br>Percentage completed:", round(percentage_completed_services_d, 2), "%"))) +
+  geom_col() +
+  coord_flip() + # flips cooordinates; can use y = within aes() instead too
+  labs(title = "Percent of Completed Treatment Discharges by Type of treatment service/setting at discharge, 2024 TEDS-D",
+       y = "% of discharges",
+       x = "Type of treatment service/setting at discharge") +
+  theme(plot.title = element_text(hjust = 0.5)) + #doesn't shift title to center??
+  theme_minimal()
+ggplotly(plot_percent_of_completion_by_services_d, tooltip = "text")
+
+###ASK AMBER AS TO WHY tooltip in aes did not work; had to call it again when running ggplotly
+```
+
+```{r, eval=FALSE}
+#| label: q3.2
+#####completion rates vs length of stay (los)
+#histogram
+
+# selecting data
+my_teds_d_los <- teds_d %>%
+  clean_names() %>% # janitor
+  select(los, reason)
+
+head(my_teds_d_los)
+```
+
+```{r, eval=FALSE}
 #missing-data-w-naniar
 miss_var_summary(my_teds_d_los)
 
@@ -568,7 +730,7 @@ teds_d %>%
   adorn_totals("row") # shows total of variables being checked
 ```
 
-```{r}
+```{r, eval=FALSE}
 #filtering by treatment completed
 filtered_my_teds_d_los <- my_teds_d_los %>%
   dplyr::filter(
@@ -592,7 +754,7 @@ sum(filtered_my_teds_d_los$reason == "Treatment completed", na.rm = TRUE)
 #####CHECK "WORKS; checking individual state for count "no use"" for other methods of checking
 ```
 
-```{r}
+```{r, eval=FALSE}
 ### Using tabyl(), show the breakdown of services_d (services_d for discharge). Which services_d is most common, and what percentage of all discharges does it account for?
 class(filtered_my_teds_d_los$los)
 #look at this variable; check class
@@ -682,7 +844,7 @@ filtered_my_teds_d_los2 <- filtered_my_teds_d_los %>%
                             "37" = "365+",
                             .missing = "unknown"),
          label_los = factor(label_los),
-         los = sprintf("%03d", los))
+         los = sprintf("%02d", los))
 # "Turn the codes into text, swap each code for its label (and call missing ones 'unknown'),
 # then treat the result as a category (factor)."
 
@@ -693,7 +855,21 @@ filtered_my_teds_d_los2 %>%
 #  #adorn_pct_formatting(digit = 2) # rounds to 2 decimal digits
 ```
 
-```{r}
+```{r, eval=FALSE}
+# count of completed treatment cases grouped by length of stay
+count_completed_by_los <- filtered_my_teds_d_los2 |> #takes filtered_my_teds_d_los2 dataset, each row is a specific record (left for a various reason)
+  group_by(los) |> # group by stfips code
+  summarize(#total_cases = n(), # count rows
+            #completed_cases = sum(reason == "Treatment completed", na.rm = TRUE)) |>  # na.rm removes na values if they exist
+            completed_cases = sum(reason == "Treatment completed", na.rm = TRUE))# |>  # na.rm removes na values if they exist
+#  mutate(percentage_completed = (completed_cases / total_cases) * 100)
+
+#summary(count_completed_by_los)
+
+count_completed_by_los
+```
+
+```{r, eval=FALSE}
 ##loads packages if not done so already
 library(tidyverse)
 library(janitor) 
@@ -701,51 +877,139 @@ library(naniar) # tools for exploring and visualizing missing data
 library(plotly) # makes finished ggplot charts interactive
 ```
 
+```{r, eval=FALSE}
+# ###MY VERSION BAR CHART
+# plot_filtered_my_teds_d_services_d <- ggplot(data = filtered_my_teds_d_services_d, aes(x = fct_infreq(services_d))) + #fct_infreq(variable) sorts by largest to smallest  
+#   ######REORDER DOESN'T WORK; ASK WHY
+#   geom_bar() +
+#   coord_flip() + # flips cooordinates; can use y = within aes() instead too
+#   labs(title = "Completed Treatment Discharges by Type of Service, 2024 TEDS-D",
+#        x = "Number of discharges",
+#        y = "Type of treatment service") +
+#   theme(plot.title = element_text(hjust = 0.5)) + #doesn't shift title to center??
+#   theme_minimal()
+# ggplotly(plot_filtered_my_teds_d_services_d)
+```
+
+```{r, eval=FALSE}
+#library(ggplot2)
+#
+## Plot using density
+#ggplot(filtered_my_teds_d_los2, aes(x = los)) +
+#  geom_histogram(aes(y = after_stat(density)), 
+#                 breaks = c(0, 1, 2, 3, 4, 5, 10), 
+#                 fill = "steelblue", 
+#                 color = "white") +
+#  labs(title = "Duration Histogram",
+#       x = "Years",
+#       y = "Density") +
+#  theme_minimal()
+```
+
+```{r, eval=FALSE}
+#library(ggplot2)
+#
+## Create a data frame
+#df <- data.frame(durations = c(1, 1.5, 2, 3, 4, 5, 6, 7, 8, 9, 10), density = c(1,2#,3,4,5,6,7,8,9,10,11))
+#
+## Plot using density
+#ggplot(df, aes(x = durations)) +
+#  geom_histogram(aes(y = after_stat(density)), 
+#                 breaks = c(0, 1, 2, 3, 4, 5, 10), 
+#                 fill = "steelblue", 
+#                 color = "white") +
+#  labs(title = "Duration Histogram",
+#       x = "Years",
+#       y = "Density") +
+#  theme_minimal()
+```
+
 ```{r}
-###MY VERSION BAR CHART
-plot_filtered_my_teds_d_services_d <- ggplot(data = filtered_my_teds_d_services_d, aes(x = fct_infreq(services_d))) + #fct_infreq(variable) sorts by largest to smallest  
-  ######REORDER DOESN'T WORK; ASK WHY
-  geom_bar() +
+##### q3.2 FRESH ATTEMPT
+# 1. Start from teds_d. Do not filter by reason.
+my_teds_d_los <- teds_d %>%
+  clean_names() %>% # janitor
+  select(los, reason)
+
+head(my_teds_d_los)
+```
+
+```{r}
+#missing-data-w-naniar
+miss_var_summary(my_teds_d_los)
+
+gg_miss_var(my_teds_d_los)
+
+my_teds_d_los %>%
+  slice_sample(n = 500) %>% # from dplyr
+  vis_miss() # from naniar
+
+teds_d %>% 
+  tabyl(los) %>% # from janitor package
+  #NO MISSING DATA; CAN MOVE ON
+  adorn_totals("row") # shows total of variables being checked
+```
+
+```{r}
+# make a grouped version of los with case_when() inside mutate().
+my_teds_d_los <- my_teds_d_los %>%
+  mutate(
+    binned_los = case_when(
+      los >= 1 & los <= 7 ~ "1 ~ 7 days",
+      los >= 8 & los <= 14 ~ "8 ~ 14 days",
+      los >= 15 & los <= 30 ~ "15 ~ 30 days",
+      los == 31 ~ "31 to 45 days",
+      los == 32 ~ "46 to 60 days",
+      los == 33 ~ "61 to 90 days",
+      los == 34 ~ "91 to 120 days",
+      los == 35 ~ "121 to 180 days",
+      los == 36 ~ "181 to 365 days",
+      los == 37 ~ "Over 365 days"
+    )
+  )
+
+####CHECKING DATA AGAIN
+my_teds_d_los %>% 
+  tabyl(los) %>%
+  arrange(desc(n)) %>%  # arranges in descending order
+  adorn_totals("row") %>% # shows total of variables being checked
+  adorn_pct_formatting(digit = 2) # rounds to 2 decimal digits
+```
+
+```{r}
+# 2. Use group_by(services_d) instead of group_by(stfips).
+# 3. In summarize(), count all rows with n() and completed rows with sum(reason == "Treatment completed").
+# 4. Use mutate() to calculate the percentage, the same as in Q2.
+
+percent_by_binned_los <- my_teds_d_los |>
+  group_by(binned_los) |> # group by binned los
+  summarize(total_cases_los = n(), # n() is to count rows/TOTAL ROWS
+            treatment_completed_cases_los = sum(reason == "Treatment completed", na.rm = TRUE)) |>  # na.rm removes na values if they exist
+  mutate(percentage_completed_los = (treatment_completed_cases_los / total_cases_los) * 100)
+
+summary(percent_by_binned_los)
+percent_by_binned_los
+```
+
+```{r}
+#| label: q3.2 ANSWER
+
+plot_percent_by_binned_los <- ggplot(data = percent_by_binned_los,
+  aes(x = binned_los,
+      y = percentage_completed_los,
+      text = paste(
+        "Length of Stay (LoS):", binned_los,
+        "<br>Percentage completed:", round(percentage_completed_los, 2), "%"))) +
+  geom_col() +
   coord_flip() + # flips cooordinates; can use y = within aes() instead too
-  labs(title = "Completed Treatment Discharges by Type of Service, 2024 TEDS-D",
-       x = "Number of discharges",
-       y = "Type of treatment service") +
+  labs(title = "Percent of Completed Treatment Discharges by Length of Stay, 2024 TEDS-D",
+       y = "% of discharges",
+       x = "Length of Stay (LoS)") +
   theme(plot.title = element_text(hjust = 0.5)) + #doesn't shift title to center??
   theme_minimal()
-ggplotly(plot_filtered_my_teds_d_services_d)
-```
+ggplotly(plot_percent_by_binned_los, tooltip = "text")
 
-```{r}
-library(ggplot2)
-
-# Plot using density
-ggplot(filtered_my_teds_d_los2, aes(x = los)) +
-  geom_histogram(aes(y = after_stat(density)), 
-                 breaks = c(0, 1, 2, 3, 4, 5, 10), 
-                 fill = "steelblue", 
-                 color = "white") +
-  labs(title = "Duration Histogram",
-       x = "Years",
-       y = "Density") +
-  theme_minimal()
-```
-
-```{r}
-library(ggplot2)
-
-# Create a data frame
-df <- data.frame(durations = c(1, 1.5, 2, 3, 4, 5, 6, 7, 8, 9, 10), density = c(1,2,3,4,5,6,7,8,9,10,11))
-
-# Plot using density
-ggplot(df, aes(x = durations)) +
-  geom_histogram(aes(y = after_stat(density)), 
-                 breaks = c(0, 1, 2, 3, 4, 5, 10), 
-                 fill = "steelblue", 
-                 color = "white") +
-  labs(title = "Duration Histogram",
-       x = "Years",
-       y = "Density") +
-  theme_minimal()
+###ASK AMBER AS TO WHY tooltip in aes did not work; had to call it again when running ggplotly
 ```
 
 **Summary:**
@@ -760,6 +1024,11 @@ Then, in a sentence, say what this combined view shows that your two separate ch
 
 ```{r}
 #| label: extra-credit
+
+ggplot(data = penguins_data, aes(x = los, y = body_mass_g, color = species, shape = island)) +
+  geom_point() +
+  theme(legend.position = "none") +
+  facet_wrap(~sex)
 
 ```
 
