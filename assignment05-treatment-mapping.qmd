@@ -60,7 +60,7 @@ c)  In a sentence or two: what does the `reason` value "Transferred to another t
 > **Full credit:** a working `tabyl()`, a readable labeled bar chart, and a sentence or two showing you thought about part (c). There is no trick in this question!
 
 ```{r}
-#| label: q1.1
+#| label: q1.1 ANSWER
 
 ### Using tabyl(), show the breakdown of reason (reason for discharge). Which reason is most common, and what percentage of all discharges does it account for?
 class(teds_d$reason)
@@ -89,6 +89,8 @@ teds_d %>%
   arrange(desc(n)) %>%  # arranges in descending order
   adorn_pct_formatting(digit = 2) # rounds to 2 decimal digits
 ```
+
+The reason for discharge that was the most common was due to treatment being completed, which occurred 47.80% of the time.
 
 ```{r}
 #| label: q1.2 ANSWER
@@ -131,9 +133,9 @@ ggplot(teds_d, aes(y = fct_infreq(services_d))) + #changed y to servies instead 
 #| label: q1.3 ANSWER
 ```
 
-**Answer to (a): refer to label: q1.a**
+**Answer to (a): refer to label: "q1.1 ANSWER"**
 
-**Answer to (b):** (produce a bar chart in the code chunk above)
+**Answer to (b):** (produce a bar chart in the code chunk above) **refer to label: "q1.2 ANSWER"**
 
 **Answer to (c):** "Transferred to another treatment program or facility" may or may not mean something for the completion percentages, depending on how the "Transferred to (...)" designation is handled.
 
