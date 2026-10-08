@@ -161,6 +161,12 @@ rawData %>%
 ##### Conclusion: data should be valid as it is sourced from PokeAPI, which is maintained and expanded by an open-source community.
 ```
 
+```{r, eval=FALSE}
+isItRare <- rawData %>%
+  filter(is_legendary == "TRUE" | is_mythical == "TRUE")
+isItRare
+```
+
 ```{r}
 ###Remember to use na.rm = TRUE if you have missing values that affect summaries!
 ###Show basic summaries of your dataset, including:
